@@ -1,82 +1,81 @@
 package XIRCD::Server;
-use strict;
-use warnings;
+use MooseX::POE;
+
+with qw(MooseX::POE::Aliased);
 
 use Clone qw/clone/;
 use Encode;
 
 use POE qw/Component::Server::IRC/;
 
-sub spawn {
-    my $class = shift;
-    my $config = @_ > 1 ? {@_} : $_[0];
+has 'ircd' => (
+    isa => 'POE::Component::Server::IRC',
+    is  => 'rw',
+);
 
-    $config->{servername} ||= 'xircd.ircd';
-    $config->{client_encoding} ||= 'utf-8';
-
-    my $ircd = POE::Component::Server::IRC->spawn( config => clone($config) );
-    POE::Session->create(
-        package_states => [
-            __PACKAGE__, [qw/_start ircd_daemon_public publish_message join_channel/],
-        ],
-        heap => { ircd => $ircd, config => $config },
-    );
-}
+has 'config' => (
+    isa => 'HashRef',
+    is  => 'rw',
+);
 
 sub debug(@) { ## no critic.
     print @_ if $ENV{XIRCD_DEBUG};
 }
 
-sub _start {
-    my ($kernel, $heap) = @_[KERNEL, HEAP];
+sub get_args(@) { ## no critic.
+    return @_[9..19];
+}
 
-    $kernel->alias_set('ircd');
+sub START {
+    my $self = shift;
 
-    my ($ircd, $config) = @$heap{qw/ircd config/};
+    $self->alias('ircd');
 
-    $ircd->yield('register');
-    $ircd->add_auth( mask => '*@*' );
-    $ircd->add_listener( port => $config->{port} || 6667 );
+    $self->config->{servername} ||= 'xircd.ircd';
+    $self->config->{client_encoding} ||= 'utf-8';
+
+    $self->ircd(POE::Component::Server::IRC->spawn( config => clone($self->config) ));
+    $self->ircd->yield('register');
+    $self->ircd->add_auth( mask => '*@*' );
+    $self->ircd->add_listener( port => $self->config->{port} || 6667 );
 
     debug "start irc \n\n";
 
-    $ircd->yield( add_spoofed_nick => { nick => $config->{server_nick} } );
-
-    $heap->{nicknames} = {};
+    $self->ircd->yield( add_spoofed_nick => { nick => $self->config->{server_nick} } );
 }
 
-sub ircd_daemon_public {
-    my ($kernel, $heap, $user, $channel, $text) = @_[KERNEL, HEAP, ARG0, ARG1, ARG2];
-    my $encoding = $heap->{config}{client_encoding};
+event ircd_daemon_public => sub {
+    my ($self, $user, $channel, $text) = @_;
+    my $encoding = $self->config->{client_encoding};
 
-    $kernel->post( im => send_message => decode( $encoding, $text ) );
-    $kernel->post( ustream => say => decode( $encoding, $text ) );
-}
+    POE::Kernel->post( im => send_message => decode( $encoding, $text ) );
+    POE::Kernel->post( ustream => say => decode( $encoding, $text ) );
+};
 
-sub publish_message {
-    my ($kernel, $heap, $channel, $message) = @_[KERNEL, HEAP, ARG0, ARG1];
+event publish_message => sub {
+    my $self = shift;
+    my ($channel, $message) = get_args(@_);
 
     debug "publish to irc: [$channel] $message \n\n";
 
-    my ($ircd, $config) = @$heap{qw/ircd config/};
-    $message = encode( $config->{client_encoding}, $message );
+    $message = encode( $self->config->{client_encoding}, $message );
 
     my $say = sub {
         my ($nick, $text) = @_;
-        $ircd->yield( daemon_cmd_privmsg => $nick => $channel, $_ )
+        $self->ircd->yield( daemon_cmd_privmsg => $nick => $channel, $_ )
             for split /\r?\n/, $text;
     };
 
-    $say->($config->{server_nick}, $message);
-}
+    $say->($self->config->{server_nick}, $message);
+};
 
-sub join_channel {
-    my ($kernel, $heap, $channel) = @_[KERNEL, HEAP, ARG0];
-    my ($ircd, $config) = @$heap{qw/ircd config/};
+event join_channel => sub {
+    my $self = shift;
+    my ($channel,) = get_args(@_);
 
     debug "join channel: $channel";
 
-    $ircd->yield( daemon_cmd_join => $config->{server_nick}, $channel );
-}
+    $self->ircd->yield( daemon_cmd_join => $self->config->{server_nick}, $channel );
+};
 
 1;

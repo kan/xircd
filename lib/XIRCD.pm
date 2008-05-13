@@ -3,9 +3,6 @@ package XIRCD;
 use strict;
 use warnings;
 our $VERSION = '0.01';
-use base qw/Class::Accessor::Fast/;
-
-__PACKAGE__->mk_accessors('config');
 
 use POE;
 use Config::Pit;
@@ -18,12 +15,12 @@ sub bootstrap {
 
     my $config = $class->_load_conf;
 
-    XIRCD::Server->spawn( $config->{ircd} );
+    XIRCD::Server->new( config => $config->{ircd} );
 
-    for my $plugin ( @{$config->{plugins}} ) {
-        my $module = $plugin->{module};
+    for my $component ( @{$config->{components}} ) {
+        my $module = $component->{module};
         $module->require;
-        $module->spawn( $plugin );
+        $module->new( config => $component );
     }
 
     POE::Kernel->run;
