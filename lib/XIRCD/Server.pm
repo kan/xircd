@@ -18,6 +18,12 @@ has 'config' => (
     is  => 'rw',
 );
 
+has 'nicknames' => (
+    isa => 'HashRef',
+    is  => 'rw',
+    default => sub { {} },
+);
+
 sub debug(@) { ## no critic.
     print @_ if $ENV{XIRCD_DEBUG};
 }
@@ -31,6 +37,8 @@ sub START {
 
     $self->alias('ircd');
 
+    debug "start irc \n\n";
+
     $self->config->{servername} ||= 'xircd.ircd';
     $self->config->{client_encoding} ||= 'utf-8';
 
@@ -38,8 +46,6 @@ sub START {
     $self->ircd->yield('register');
     $self->ircd->add_auth( mask => '*@*' );
     $self->ircd->add_listener( port => $self->config->{port} || 6667 );
-
-    debug "start irc \n\n";
 
     $self->ircd->yield( add_spoofed_nick => { nick => $self->config->{server_nick} } );
 }
@@ -54,19 +60,21 @@ event ircd_daemon_public => sub {
 
 event publish_message => sub {
     my $self = shift;
-    my ($channel, $message) = get_args(@_);
+    my ($nick, $channel, $message) = get_args(@_);
 
-    debug "publish to irc: [$channel] $message \n\n";
+    debug "publish to irc: [$channel] $nick : $message \n\n";
+
+    $self->nicknames->{$channel} ||= {};
+    if ($nick && !$self->nicknames->{$channel}->{$nick}) {
+        $self->nicknames->{$channel}->{$nick}++;
+        $self->ircd->yield( add_spoofed_nick => { nick => $nick } );
+        $self->ircd->yield( daemon_cmd_join => $nick, $channel );
+    }
 
     $message = encode( $self->config->{client_encoding}, $message );
 
-    my $say = sub {
-        my ($nick, $text) = @_;
-        $self->ircd->yield( daemon_cmd_privmsg => $nick => $channel, $_ )
-            for split /\r?\n/, $text;
-    };
-
-    $say->($self->config->{server_nick}, $message);
+    $self->ircd->yield( daemon_cmd_privmsg => $nick => $channel, $_ )
+        for split /\r?\n/, $message;
 };
 
 event join_channel => sub {

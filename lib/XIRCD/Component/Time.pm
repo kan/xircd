@@ -36,7 +36,7 @@ event timecall => sub {
 
     debug "timecall";
 
-    POE::Kernel->post( ircd => 'publish_message', $self->config->{channel}, $self->date->strftime("%Y/%m/%d %H:%M:%S") );
+    POE::Kernel->post( ircd => 'publish_message' => 'time', $self->config->{channel}, $self->date->strftime("%Y/%m/%d %H:%M:%S") );
     POE::Kernel->delay('timecall', 10);
 };
 
