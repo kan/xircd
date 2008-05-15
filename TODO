@@ -1,0 +1,6 @@
+- X:C:Twitter update mode
+- XIRCD::Component shoud use Sub::Exporter
+- use self
+- join_channel, yeild, publish_message, etc ... write DSL
+- get_args use Devel::Caller
+- auto START & STOP
