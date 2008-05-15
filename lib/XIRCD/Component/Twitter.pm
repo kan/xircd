@@ -3,6 +3,7 @@ use MooseX::POE;
 
 with qw(MooseX::POE::Aliased);
 
+use Encode;
 use HTTP::Request::Common;
 use HTTP::Date ();
 use JSON::Any;
@@ -61,6 +62,19 @@ sub START {
     $self->yield('read_twitter_friend_timeline');
 }
 
+event send_message => sub {
+    my $self = shift;
+    my ($status,) = get_args(@_);
+
+    my $req = HTTP::Request::Common::POST(
+        $self->config->{apiurl} . '/update.json',
+        [ status => encode('utf-8',$status) ],
+    );  
+    $req->authorization_basic($self->config->{twitter}->{username}, $self->config->{twitter}->{password});
+
+    POE::Kernel->post($self->http_alias => request => 'http_response', $req);
+};
+
 event read_twitter_friend_timeline => sub {
     my $self = shift;
 
@@ -114,6 +128,17 @@ event friend_timeline_success => sub {
     }
 
     POE::Kernel->delay('read_twitter_friend_timeline', $self->config->{twitter}->{retry});
+};
+
+event update_success => sub {
+    my $self = shift;
+
+    my ( $response, ) = get_args(@_);
+
+    if ( $response->is_success ) {
+        my $ret = JSON::Any->jsonToObj($response->content);
+        POE::Kernel->post( ircd => publish_notice => $self->config->{channel}, $ret->{text} );
+    }
 };
 
 
