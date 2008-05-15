@@ -1,5 +1,6 @@
 package XIRCD::Component::Twitter;
 use MooseX::POE;
+use XIRCD::Component;
 
 with qw(MooseX::POE::Aliased);
 
@@ -19,19 +20,6 @@ has 'config' => (
 has 'since' => (
     is => 'rw',
 );
-
-sub debug(@) { ## no critic.
-    print @_,"\n\n" if $ENV{XIRCD_DEBUG};
-}
-
-sub get_args(@) { ## no critic.
-    return @_[9..19];
-}
-
-sub http_alias {
-    my $self = shift;
-    return 'twitter_' . $self->get_session_id;
-}
 
 around 'new' => sub {
     my $call = shift;

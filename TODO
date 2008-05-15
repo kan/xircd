@@ -1,5 +1,7 @@
-- XIRCD::Component shoud use Sub::Exporter
 - use self
-- join_channel, yeild, publish_message, etc ... write DSL
 - get_args use Devel::Caller
 - auto START & STOP
+-- auto join channel
+-- config to attribute
+-- join_channel, yeild, publish_message, etc ... write DSL
+- support TIG like message queue

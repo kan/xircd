@@ -8,14 +8,14 @@ use POE;
 use Config::Pit;
 use UNIVERSAL::require;
 
-use XIRCD::Server;
+use XIRCD::Component::Server;
 
 sub bootstrap {
     my $class = shift;
 
     my $config = $class->_load_conf;
 
-    XIRCD::Server->new( config => $config->{ircd} );
+    XIRCD::Component::Server->new( config => $config->{ircd} );
 
     for my $component ( @{$config->{components}} ) {
         my $module = $component->{module};
@@ -34,10 +34,10 @@ sub _load_conf {
                 server_nick     => 'xircd',
                 client_encoding => 'utf-8',
                 no_nick_tweaks  => 1,
-                plugins         => [
-                    { module => 'Time', channel => '#time' },
-                ],
-            }
+            },
+            components => [
+                { module => 'Time', channel => '#time' },
+            ],
         }
     );
 }

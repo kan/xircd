@@ -1,5 +1,6 @@
 package XIRCD::Component::Wassr;
 use MooseX::POE;
+use XIRCD::Component;
 
 with 'MooseX::POE::Aliased';
 
@@ -27,14 +28,6 @@ has 'jid' => (
     isa     => 'Str',
     is      => 'rw',
 );
-
-sub debug(@) { ## no critic.
-    print @_,"\n\n" if $ENV{XIRCD_DEBUG};
-}
-
-sub get_args(@) { ## no critic.
-    return @_[9..19];
-}
 
 sub START {
     my $self = shift;

@@ -1,4 +1,4 @@
-package XIRCD::Server;
+package XIRCD::Component::Server;
 use MooseX::POE;
 
 with qw(MooseX::POE::Aliased);
@@ -6,6 +6,7 @@ with qw(MooseX::POE::Aliased);
 use Clone qw/clone/;
 use Encode;
 
+use XIRCD::Component;
 use POE qw/Component::Server::IRC/;
 
 has 'ircd' => (
@@ -29,14 +30,6 @@ has 'components' => (
     is  => 'rw',
     default => sub { {} },
 );
-
-sub debug(@) { ## no critic.
-    print @_, "\n\n" if $ENV{XIRCD_DEBUG};
-}
-
-sub get_args(@) { ## no critic.
-    return @_[9..19];
-}
 
 sub START {
     my $self = shift;

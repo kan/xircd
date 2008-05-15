@@ -1,5 +1,6 @@
 package XIRCD::Component::Time;
 use MooseX::POE;
+use XIRCD::Component;
 
 with qw(MooseX::POE::Aliased);
 
@@ -15,10 +16,6 @@ has 'date' => (
     is      => 'ro',
     default => sub { DateTime->now( time_zone => 'Asia/Tokyo' ) },
 );
-
-sub debug(@) { ## no critic.
-    print @_ if $ENV{XIRCD_DEBUG};
-}
 
 sub START {
     my $self = shift;
