@@ -23,6 +23,11 @@ has 'jabber' => (
     is      => 'rw',
 );
 
+has 'jid' => (
+    isa     => 'Str',
+    is      => 'rw',
+);
+
 sub debug(@) { ## no critic.
     print @_ if $ENV{XIRCD_DEBUG};
 }
@@ -34,7 +39,7 @@ sub get_args(@) { ## no critic.
 sub START {
     my $self = shift;
 
-    $self->alias('jabber');
+    $self->alias('wassr');
 
     debug "start wassr\n";
 
@@ -57,7 +62,7 @@ sub START {
         )
     );
 
-    POE::Kernel->post( ircd => 'join_channel', $self->config->{channel} );
+    POE::Kernel->post( ircd => 'join_channel', $self->config->{channel}, $self->alias );
     POE::Kernel->post( jabber => 'connect' );
 }
 
@@ -68,7 +73,6 @@ event status_handler => sub {
     if ($state == +PCJ_INIT_FINISHED) {
         debug "init finished\n";
         $self->jid($self->jabber->jid);
-        #$heap->{sid} = $sender->ID;
 
         POE::Kernel->post(jabber => 'output_handler', POE::Filter::XML::Node->new('presence'));
         POE::Kernel->post(jabber => 'purge_queue');
@@ -81,10 +85,53 @@ event input_handler => sub {
 
     debug "recv:", $node->to_str, "\n\n";
 
-    my ($body) = $node->get_tag('body');
+    my ($body,) = $node->get_tag('body');
+
     if ($body && $node->attr('from') =~ /^wassr-bot\@wassr\.jp/) {
-        my ($nick, $text) = $body =~ /^(\w+): (.*)/s;
-        POE::Kernel->post( ircd => 'publish_message', $nick, $self->config->{channel}, $text ) if $nick;
+        my ($nick, $text) = $body->data =~ /^([A-Za-z0-9_.-]+): (.*)/s;
+        if ($nick && $text) {
+            POE::Kernel->post( ircd => 'publish_message', $nick, $self->config->{channel}, $text );
+        } else {
+            POE::Kernel->post( ircd => 'publish_notice', $self->config->{channel}, $body->data );
+        }
+    }
+};
+
+event send_message => sub {
+    my $self = shift;
+    my ($message,) = get_args(@_);
+
+    my $node = POE::Filter::XML::Node->new('message');
+
+    $node->attr('to', 'wassr-bot@wassr.jp');
+    $node->attr('from', $self->{jid} );
+    $node->attr('type', 'chat');
+    $node->insert_tag('body')->data( $message );
+
+    debug "send:", $node->to_str, "\n\n";
+
+    POE::Kernel->post( jabber => output_handler => $node );
+};
+
+event error_handler => sub {
+    my $self = shift;
+    my ($error,) = get_args(@_);
+
+    if ( $error == +PCJ_SOCKETFAIL or $error == +PCJ_SOCKETDISCONNECT or $error == +PCJ_CONNECTFAIL ) {
+        print "Reconnecting!\n";
+        POE::Kernel->post( jabber => 'reconnect' );
+    }
+    elsif ( $error == +PCJ_SSLFAIL ) {
+        print "TLS/SSL negotiation failed\n";
+    }
+    elsif ( $error == +PCJ_AUTHFAIL ) {
+        print "Failed to authenticate\n";
+    }
+    elsif ( $error == +PCJ_BINDFAIL ) {
+        print "Failed to bind a resource\n";
+    }
+    elsif ( $error == +PCJ_SESSIONFAIL ) {
+        print "Failed to establish a session\n";
     }
 };
 

@@ -24,6 +24,12 @@ has 'nicknames' => (
     default => sub { {} },
 );
 
+has 'components' => (
+    isa => 'HashRef',
+    is  => 'rw',
+    default => sub { {} },
+);
+
 sub debug(@) { ## no critic.
     print @_ if $ENV{XIRCD_DEBUG};
 }
@@ -51,11 +57,16 @@ sub START {
 }
 
 event ircd_daemon_public => sub {
-    my ($self, $user, $channel, $text) = @_;
+    my $self = shift;
+    my($nick, $channel, $text) = get_args(@_);
     my $encoding = $self->config->{client_encoding};
 
-    POE::Kernel->post( im => send_message => decode( $encoding, $text ) );
-    POE::Kernel->post( ustream => say => decode( $encoding, $text ) );
+    debug "public [$channel] $nick : $text";
+
+    my $component = $self->components->{$channel};
+    return unless $component;
+
+    POE::Kernel->post( $component => send_message => decode( $encoding, $text ) );
 };
 
 event publish_message => sub {
@@ -71,18 +82,32 @@ event publish_message => sub {
         $self->ircd->yield( daemon_cmd_join => $nick, $channel );
     }
 
-    $message = encode( $self->config->{client_encoding}, $message );
+    #$message = encode( $self->config->{client_encoding}, $message );
 
     $self->ircd->yield( daemon_cmd_privmsg => $nick => $channel, $_ )
         for split /\r?\n/, $message;
 };
 
+event publish_notice => sub {
+    my $self = shift;
+    my ($channel, $message) = get_args(@_);
+
+    debug "notice to irc: [$channel] $message \n\n";
+
+    #$message = encode( $self->config->{client_encoding}, $message );
+
+    $self->ircd->yield( daemon_cmd_notice => $self->config->{server_nick} => $channel, $_ )
+        for split /\r?\n/, $message;
+};
+
 event join_channel => sub {
     my $self = shift;
-    my ($channel,) = get_args(@_);
+    my ($channel, $component) = get_args(@_);
 
     debug "join channel: $channel";
+    debug "register: $channel => $component";
 
+    $self->components->{$channel} = $component;
     $self->ircd->yield( daemon_cmd_join => $self->config->{server_nick}, $channel );
 };
 
