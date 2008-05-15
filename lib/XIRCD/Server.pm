@@ -31,7 +31,7 @@ has 'components' => (
 );
 
 sub debug(@) { ## no critic.
-    print @_ if $ENV{XIRCD_DEBUG};
+    print @_, "\n\n" if $ENV{XIRCD_DEBUG};
 }
 
 sub get_args(@) { ## no critic.
@@ -43,7 +43,7 @@ sub START {
 
     $self->alias('ircd');
 
-    debug "start irc \n\n";
+    debug "start irc";
 
     $self->config->{servername} ||= 'xircd.ircd';
     $self->config->{client_encoding} ||= 'utf-8';
@@ -73,7 +73,7 @@ event publish_message => sub {
     my $self = shift;
     my ($nick, $channel, $message) = get_args(@_);
 
-    debug "publish to irc: [$channel] $nick : $message \n\n";
+    debug "publish to irc: [$channel] $nick : $message";
 
     $self->nicknames->{$channel} ||= {};
     if ($nick && !$self->nicknames->{$channel}->{$nick}) {
@@ -92,7 +92,7 @@ event publish_notice => sub {
     my $self = shift;
     my ($channel, $message) = get_args(@_);
 
-    debug "notice to irc: [$channel] $message \n\n";
+    debug "notice to irc: [$channel] $message";
 
     #$message = encode( $self->config->{client_encoding}, $message );
 

@@ -29,7 +29,7 @@ has 'jid' => (
 );
 
 sub debug(@) { ## no critic.
-    print @_ if $ENV{XIRCD_DEBUG};
+    print @_,"\n\n" if $ENV{XIRCD_DEBUG};
 }
 
 sub get_args(@) { ## no critic.
@@ -41,7 +41,7 @@ sub START {
 
     $self->alias('wassr');
 
-    debug "start wassr\n";
+    debug "start wassr";
 
     my ($username, $hostname) = split '@', $self->config->{jabber}->{username};
 
@@ -71,7 +71,7 @@ event status_handler => sub {
     my ($state,) = get_args(@_);
 
     if ($state == +PCJ_INIT_FINISHED) {
-        debug "init finished\n";
+        debug "init finished";
         $self->jid($self->jabber->jid);
 
         POE::Kernel->post(jabber => 'output_handler', POE::Filter::XML::Node->new('presence'));
@@ -83,7 +83,7 @@ event input_handler => sub {
     my $self = shift;
     my ($node,) = get_args(@_);
 
-    debug "recv:", $node->to_str, "\n\n";
+    debug "recv:", $node->to_str;
 
     my ($body,) = $node->get_tag('body');
 
@@ -108,7 +108,7 @@ event send_message => sub {
     $node->attr('type', 'chat');
     $node->insert_tag('body')->data( $message );
 
-    debug "send:", $node->to_str, "\n\n";
+    debug "send:", $node->to_str;
 
     POE::Kernel->post( jabber => output_handler => $node );
 };
