@@ -1,5 +1,3 @@
-- use self
-- get_args use Devel::Caller
 - auto START & STOP
 -- auto join channel
 -- config to attribute

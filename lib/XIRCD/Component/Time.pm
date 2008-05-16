@@ -18,23 +18,22 @@ has 'date' => (
 );
 
 sub START {
-    my $self = shift;
-
-    $self->alias('time');
+    self->alias('time');
 
     debug 'start time';
 
-    POE::Kernel->post( ircd => 'join_channel', $self->config->{channel} );
-    $self->yield('timecall');
+    POE::Kernel->post( ircd => 'join_channel', self->config->{channel} );
+    self->yield('timecall');
 }
 
 event timecall => sub {
-    my $self = shift;
-
     debug "timecall";
 
-    POE::Kernel->post( ircd => 'publish_message' => 'time', $self->config->{channel}, $self->date->strftime("%Y/%m/%d %H:%M:%S") );
-    POE::Kernel->delay('timecall', 10);
+    POE::Kernel->post(
+        ircd => 'publish_message' => 'time',
+        self->config->{channel}, self->date->strftime("%Y/%m/%d %H:%M:%S")
+    );
+    POE::Kernel->delay( 'timecall', 10 );
 };
 
 

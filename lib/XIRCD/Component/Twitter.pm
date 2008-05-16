@@ -24,63 +24,57 @@ has 'since' => (
 around 'new' => sub {
     my $call = shift;
 
-    my $self = $call->(@_);
+    my self = $call->(@_);
 
     POE::Component::Client::HTTP->spawn(
         Agent => 'xircd_component_twitter/0.1',
-        Alias => $self->http_alias,
+        Alias => self->http_alias,
     );
 
-    $self->config->{apiurl}   ||= 'http://twitter.com/statuses';
-    $self->config->{apihost}  ||= 'twitter.com:80';
-    $self->config->{apirealm} ||= 'Twitter API';
-    $self->config->{alias}    ||= 'twitter';
+    self->config->{apiurl}   ||= 'http://twitter.com/statuses';
+    self->config->{apihost}  ||= 'twitter.com:80';
+    self->config->{apirealm} ||= 'Twitter API';
+    self->config->{alias}    ||= 'twitter';
 
-    return $self;
+    return self;
 };
 
 sub START {
-    my $self = shift;
-
-    $self->alias('twitter');
+    self->alias('twitter');
 
     debug "start twitter";
 
-    POE::Kernel->post( ircd => 'join_channel', $self->config->{channel}, $self->alias );
-    $self->yield('read_twitter_friend_timeline');
+    POE::Kernel->post( ircd => 'join_channel', self->config->{channel}, self->alias );
+    self->yield('read_twitter_friend_timeline');
 }
 
 event send_message => sub {
-    my $self = shift;
-    my ($status,) = get_args(@_);
+    my ($status,) = get_args;
 
     my $req = HTTP::Request::Common::POST(
-        $self->config->{apiurl} . '/update.json',
+        self->config->{apiurl} . '/update.json',
         [ status => encode('utf-8',$status) ],
     );  
-    $req->authorization_basic($self->config->{twitter}->{username}, $self->config->{twitter}->{password});
+    $req->authorization_basic(self->config->{twitter}->{username}, self->config->{twitter}->{password});
 
-    POE::Kernel->post($self->http_alias => request => 'http_response', $req);
+    POE::Kernel->post(self->http_alias => request => 'http_response', $req);
 };
 
 event read_twitter_friend_timeline => sub {
-    my $self = shift;
-
     debug "read twitter";
 
-    my $uri = URI->new($self->config->{apiurl} . '/friends_timeline.json');
-    $uri->query_form(since => HTTP::Date::time2str($self->since)) if $self->since;
-    $self->since(time);
+    my $uri = URI->new(self->config->{apiurl} . '/friends_timeline.json');
+    $uri->query_form(since => HTTP::Date::time2str(self->since)) if self->since;
+    self->since(time);
 
     my $req = HTTP::Request->new(GET => $uri);
-    $req->authorization_basic($self->config->{twitter}->{username}, $self->config->{twitter}->{password});
+    $req->authorization_basic(self->config->{twitter}->{username}, self->config->{twitter}->{password});
 
-    POE::Kernel->post($self->http_alias => request => 'http_response', $req);
+    POE::Kernel->post(self->http_alias => request => 'http_response', $req);
 };
 
 event http_response => sub {
-    my $self = shift;
-    my ($request_packet, $response_packet) = get_args(@_);
+    my ($request_packet, $response_packet) = get_args;
 
     my $request  = $request_packet->[0];
     my $response = $response_packet->[0];
@@ -88,20 +82,18 @@ event http_response => sub {
     my $uri = $request->uri;
     if ($uri =~ /update.json/) {
         unless ($response->is_success) {
-            $self->yield(response_error => $response);
+            self->yield(response_error => $response);
             return;
         }
-        $self->yield(update_success => $response);
+        self->yield(update_success => $response);
     } elsif ($uri =~ /friends_timeline.json/) {
-        $self->yield(friend_timeline_success => $response);
+        self->yield(friend_timeline_success => $response);
     }
 };
 
 event friend_timeline_success => sub {
-    my $self = shift;
-
     debug "get friend timeline";
-    my ( $response, ) = get_args(@_);
+    my ( $response, ) = get_args;
 
     if ( $response->is_success ) {
         my $ret = JSON::Any->jsonToObj($response->content);
@@ -109,23 +101,21 @@ event friend_timeline_success => sub {
             POE::Kernel->post(
                 ircd => publish_message => 
                     $line->{user}->{screen_name},
-                    $self->config->{channel}, 
+                    self->config->{channel}, 
                     $line->{text},
             );
         }
     }
 
-    POE::Kernel->delay('read_twitter_friend_timeline', $self->config->{twitter}->{retry});
+    POE::Kernel->delay('read_twitter_friend_timeline', self->config->{twitter}->{retry});
 };
 
 event update_success => sub {
-    my $self = shift;
-
-    my ( $response, ) = get_args(@_);
+    my ( $response, ) = get_args;
 
     if ( $response->is_success ) {
         my $ret = JSON::Any->jsonToObj($response->content);
-        POE::Kernel->post( ircd => publish_notice => $self->config->{channel}, $ret->{text} );
+        POE::Kernel->post( ircd => publish_notice => self->config->{channel}, $ret->{text} );
     }
 };
 
