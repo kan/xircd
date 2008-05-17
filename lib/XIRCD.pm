@@ -40,7 +40,7 @@ sub _load_conf {
                 no_nick_tweaks  => 1,
             },
             components => [
-                { module => 'Time', channel => '#time' },
+                { module => 'Time', nick => 'timer' },
             ],
         }
     );
