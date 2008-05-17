@@ -1,4 +1,5 @@
 package XIRCD::Role;
+use strict;
 use MooseX::POE::Role;
 use XIRCD::Component;
 

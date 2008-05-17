@@ -1,4 +1,5 @@
 package XIRCD::Component::Time;
+use strict;
 use MooseX::POE;
 use XIRCD::Component;
 with qw(XIRCD::Role);

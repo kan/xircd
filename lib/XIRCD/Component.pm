@@ -1,4 +1,5 @@
 package XIRCD::Component;
+use strict;
 use Moose;
 
 use self;
@@ -11,7 +12,7 @@ use Sub::Exporter -setup => {
     }
 };
 
-sub debug (@) {
+sub debug (@) { ## no critic.
     print @_, "\n\n" if $ENV{XIRCD_DEBUG};
 }
 

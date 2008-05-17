@@ -1,4 +1,5 @@
 package XIRCD::Component::Server;
+use strict;
 use MooseX::POE;
 
 with qw(MooseX::POE::Aliased);

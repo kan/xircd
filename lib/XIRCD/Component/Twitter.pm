@@ -1,4 +1,5 @@
 package XIRCD::Component::Twitter;
+use strict;
 use MooseX::POE;
 use XIRCD::Component;
 
