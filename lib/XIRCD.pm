@@ -18,9 +18,14 @@ sub bootstrap {
     XIRCD::Component::Server->new( config => $config->{ircd} );
 
     for my $component ( @{$config->{components}} ) {
-        my $module = $component->{module};
+        my $module = 'XIRCD::Component::' . $component->{module};
         $module->require;
-        $module->new( config => $component );
+        $module->new( 
+            name    => lc($component->{module}),
+            channel => '#' . lc($component->{module}),
+            %{$component} 
+        );
+        warn "load $module";
     }
 
     POE::Kernel->run;
