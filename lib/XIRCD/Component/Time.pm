@@ -4,7 +4,10 @@ use XIRCD::Component;
 
 with qw(XIRCD::Role);
 
-has 'nick' => ( isa => 'Str', io => 'rw' );
+has 'nick' => (
+    is => 'rw'
+    isa => 'Str',
+);
 
 use DateTime;
 
