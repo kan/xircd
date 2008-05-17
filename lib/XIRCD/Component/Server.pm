@@ -106,8 +106,9 @@ event ircd_daemon_public => sub {
 
     my $component = self->components->{$channel};
     return unless $component;
+    debug "send to $component";
 
-    POE::Kernel->post( $component => send_message => decode( $encoding, $text ) );
+    post $component => send_message => decode( $encoding, $text );
 };
 
 event _publish_message => sub {

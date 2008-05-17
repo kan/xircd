@@ -31,8 +31,6 @@ has 'jid' => (
 );
 
 event start => sub {
-    self->alias('wassr');
-
     debug "start wassr";
     my ($username, $hostname) = split '@', self->username;
 
@@ -80,7 +78,7 @@ event input_handler => sub {
         if ($nick && $text) {
             publish_message $nick => $text;
         } else {
-            publish_notice self->config->{channel} => $body->data;
+            publish_notice $body->data;
         }
     }
 };
