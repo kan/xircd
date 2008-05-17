@@ -33,7 +33,6 @@ event start => sub {
     self->alias('wassr');
 
     debug "start wassr";
-    warn self->channel;
     my ($username, $hostname) = split '@', self->username;
 
     self->jabber(
