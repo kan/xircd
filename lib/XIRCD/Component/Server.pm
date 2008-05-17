@@ -25,6 +25,18 @@ has 'nicknames' => (
     default => sub { {} },
 );
 
+has 'message_stack' => (
+    isa => 'HashRef',
+    is  => 'rw',
+    default => sub { {} },
+);
+
+has 'joined' => (
+    isa => 'HashRef',
+    is  => 'rw',
+    default => sub { {} },
+);
+
 has 'components' => (
     isa => 'HashRef',
     is  => 'rw',
@@ -46,6 +58,44 @@ sub START {
 
     self->ircd->yield( add_spoofed_nick => { nick => self->config->{server_nick} } );
 }
+
+event ircd_daemon_join => sub {
+    my($user, $channel) = get_args;
+
+    return unless my($nick) = $user =~ /^([^!]+)!/;
+    return if self->nicknames->{$channel}->{$nick};
+    return if $nick eq self->config->{server_nick};
+
+    self->joined->{$channel} = 1;
+
+    for my $message ( @{ self->message_stack->{$channel} || [] } ) {
+        self->ircd->yield( daemon_cmd_privmsg => $message->{nick}, $channel, $_ )
+            for split /\r?\n/, $message->{text};
+    }
+    self->message_stack->{$channel} = [];
+};
+
+event ircd_daemon_quit => sub {
+    my($user,) = get_args;
+
+    return unless my($nick) = $user =~ /^([^!]+)!/;
+    return if $nick eq self->config->{server_nick};
+
+    for my $channel ( keys %{self->joined} ) {
+        next if self->nicknames->{$channel}->{$nick};
+        self->joined->{$channel} = 0;
+    }
+};
+
+event ircd_daemon_part => sub {
+    my($user, $channel) = get_args;
+
+    return unless my($nick) = $user =~ /^([^!]+)!/;
+    return if self->nicknames->{$channel}->{$nick};
+    return if $nick eq self->config->{server_nick};
+
+    self->joined->{$channel} = 0;
+};
 
 event ircd_daemon_public => sub {
     my($nick, $channel, $text) = get_args;
@@ -73,8 +123,13 @@ event _publish_message => sub {
 
     #$message = encode( self->config->{client_encoding}, $message );
 
-    self->ircd->yield( daemon_cmd_privmsg => $nick => $channel, $_ )
-        for split /\r?\n/, $message;
+    if ( self->joined->{$channel} ) {
+        self->ircd->yield( daemon_cmd_privmsg => $nick => $channel, $_ )
+            for split /\r?\n/, $message;
+    } else {
+        self->message_stack->{$channel} ||= [];
+        push @{self->message_stack->{$channel}}, { nick => $nick, text => $message };
+    }
 };
 
 event _publish_notice => sub {
