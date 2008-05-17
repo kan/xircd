@@ -19,7 +19,7 @@ sub bootstrap {
 
     for my $component ( @{$config->{components}} ) {
         my $module = 'XIRCD::Component::' . $component->{module};
-        $module->require;
+        $module->require or die $@;
         $module->new( 
             name    => lc($component->{module}),
             channel => '#' . lc($component->{module}),
