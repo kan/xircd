@@ -59,7 +59,7 @@ event ircd_daemon_public => sub {
     POE::Kernel->post( $component => send_message => decode( $encoding, $text ) );
 };
 
-event publish_message => sub {
+event _publish_message => sub {
     my ($nick, $channel, $message) = get_args;
 
     debug "publish to irc: [$channel] $nick : $message";
@@ -77,7 +77,7 @@ event publish_message => sub {
         for split /\r?\n/, $message;
 };
 
-event publish_notice => sub {
+event _publish_notice => sub {
     my ($channel, $message) = get_args;
 
     debug "notice to irc: [$channel] $message";

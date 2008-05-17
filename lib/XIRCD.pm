@@ -25,7 +25,6 @@ sub bootstrap {
             channel => '#' . lc($component->{module}),
             %{$component} 
         );
-        warn "load $module";
     }
 
     POE::Kernel->run;

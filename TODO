@@ -1,5 +1,2 @@
-- auto START & STOP
--- auto join channel
--- config to attribute
--- join_channel, yeild, publish_message, etc ... write DSL
 - support TIG like message queue
+- more tests

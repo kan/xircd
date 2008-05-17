@@ -2,7 +2,7 @@ package XIRCD::Component::Twitter;
 use MooseX::POE;
 use XIRCD::Component;
 
-with qw(MooseX::POE::Aliased);
+with qw(XIRCD::Role);
 
 use Encode;
 use HTTP::Request::Common;
@@ -12,10 +12,14 @@ use POE qw( Component::Client::HTTP );
 use URI;
 
 
-has 'config' => (
-    isa => 'HashRef',
-    is  => 'rw',
-);
+has 'apiurl'   => ( isa => 'Str', is => 'rw', default => sub { 'http://twitter.com/statuses' } );
+has 'apihost'  => ( isa => 'Str', is => 'rw', default => sub { 'twitter.com:80' } );
+has 'apirealm' => ( isa => 'Str', is => 'rw', default => sub { 'Twitter API' } );
+
+has 'screenname' => ( isa => 'Str', is => 'rw' );
+has 'username'   => ( isa => 'Str', is => 'rw' );
+has 'password'   => ( isa => 'Str', is => 'rw' );
+has 'retry'      => ( isa => 'Int', is => 'rw', default => sub { 60 } );
 
 has 'since' => (
     is => 'rw',
@@ -24,53 +28,39 @@ has 'since' => (
 around 'new' => sub {
     my $call = shift;
 
-    my self = $call->(@_);
+    my $self = $call->(@_);
 
     POE::Component::Client::HTTP->spawn(
         Agent => 'xircd_component_twitter/0.1',
-        Alias => self->http_alias,
+        Alias => $self->http_alias,
     );
 
-    self->config->{apiurl}   ||= 'http://twitter.com/statuses';
-    self->config->{apihost}  ||= 'twitter.com:80';
-    self->config->{apirealm} ||= 'Twitter API';
-    self->config->{alias}    ||= 'twitter';
-
-    return self;
+    return $self;
 };
-
-sub START {
-    self->alias('twitter');
-
-    debug "start twitter";
-
-    POE::Kernel->post( ircd => 'join_channel', self->config->{channel}, self->alias );
-    self->yield('read_twitter_friend_timeline');
-}
 
 event send_message => sub {
     my ($status,) = get_args;
 
     my $req = HTTP::Request::Common::POST(
-        self->config->{apiurl} . '/update.json',
+        self->apiurl . '/update.json',
         [ status => encode('utf-8',$status) ],
     );  
-    $req->authorization_basic(self->config->{twitter}->{username}, self->config->{twitter}->{password});
+    $req->authorization_basic(self->username, self->password);
 
-    POE::Kernel->post(self->http_alias => request => 'http_response', $req);
+    post self->http_alias => request => 'http_response', $req;
 };
 
-event read_twitter_friend_timeline => sub {
+event start => sub {
     debug "read twitter";
 
-    my $uri = URI->new(self->config->{apiurl} . '/friends_timeline.json');
+    my $uri = URI->new(self->apiurl . '/friends_timeline.json');
     $uri->query_form(since => HTTP::Date::time2str(self->since)) if self->since;
     self->since(time);
 
     my $req = HTTP::Request->new(GET => $uri);
-    $req->authorization_basic(self->config->{twitter}->{username}, self->config->{twitter}->{password});
+    $req->authorization_basic(self->username, self->password);
 
-    POE::Kernel->post(self->http_alias => request => 'http_response', $req);
+    post self->http_alias => request => 'http_response', $req;
 };
 
 event http_response => sub {
@@ -82,12 +72,12 @@ event http_response => sub {
     my $uri = $request->uri;
     if ($uri =~ /update.json/) {
         unless ($response->is_success) {
-            self->yield(response_error => $response);
+            yield response_error => $response;
             return;
         }
-        self->yield(update_success => $response);
+        yield update_success => $response;
     } elsif ($uri =~ /friends_timeline.json/) {
-        self->yield(friend_timeline_success => $response);
+        yield friend_timeline_success => $response;
     }
 };
 
@@ -98,16 +88,11 @@ event friend_timeline_success => sub {
     if ( $response->is_success ) {
         my $ret = JSON::Any->jsonToObj($response->content);
         for my $line ( reverse @{ $ret || [] } ) {
-            POE::Kernel->post(
-                ircd => publish_message => 
-                    $line->{user}->{screen_name},
-                    self->config->{channel}, 
-                    $line->{text},
-            );
+            publish_message  $line->{user}->{screen_name} => $line->{text};
         }
     }
 
-    POE::Kernel->delay('read_twitter_friend_timeline', self->config->{twitter}->{retry});
+    delay start => self->retry;
 };
 
 event update_success => sub {
@@ -115,7 +100,7 @@ event update_success => sub {
 
     if ( $response->is_success ) {
         my $ret = JSON::Any->jsonToObj($response->content);
-        POE::Kernel->post( ircd => publish_notice => self->config->{channel}, $ret->{text} );
+        publish_notice $ret->{text};
     }
 };
 

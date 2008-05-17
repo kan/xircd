@@ -39,14 +39,14 @@ sub publish_message ($$) {  ## no critic.
     my $self = (caller_args(1))[0];
     my ($nick, $text) = @_;
 
-    post ircd => 'publish_message' => $nick, $self->channel, $text;
+    post ircd => '_publish_message' => $nick, $self->channel, $text;
 }
 
 sub publish_notice ($) {  ## no critic.
     my $self = (caller_args(1))[0];
     my ($text,) = @_;
 
-    post ircd => 'publish_notice' => $self->channel, $text;
+    post ircd => '_publish_notice' => $self->channel, $text;
 }
 
 

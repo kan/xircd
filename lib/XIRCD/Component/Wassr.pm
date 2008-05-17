@@ -2,7 +2,7 @@ package XIRCD::Component::Wassr;
 use MooseX::POE;
 use XIRCD::Component;
 
-with 'MooseX::POE::Aliased';
+with 'XIRCD::Role';
 
 use POE qw(
     Component::Jabber
@@ -14,35 +14,35 @@ use POE qw(
 );
 use POE::Filter::XML::NS qw/:JABBER :IQ/;
 
-has 'config' => (
-    isa => 'HashRef',
-    is  => 'rw',
-);
-
 has 'jabber' => (
     isa     => 'POE::Component::Jabber',
     is      => 'rw',
 );
+
+has 'username' => ( isa => 'Str', is => 'rw' );
+has 'password' => ( isa => 'Str', is => 'rw' );
+has 'server'   => ( isa => 'Str', is => 'rw' );
+has 'port'     => ( isa => 'Int', is => 'rw', default => sub { 5222 } );
 
 has 'jid' => (
     isa     => 'Str',
     is      => 'rw',
 );
 
-sub START {
+event start => sub {
     self->alias('wassr');
 
     debug "start wassr";
-
-    my ($username, $hostname) = split '@', self->config->{jabber}->{username};
+    warn self->channel;
+    my ($username, $hostname) = split '@', self->username;
 
     self->jabber(
         POE::Component::Jabber->new(
-            IP       => self->config->{jabber}->{server},
-            Port     => self->config->{jabber}->{port} || 5222,
+            IP       => self->server,
+            Port     => self->port,
             Hostname => $hostname,
             Username => $username,
-            Password => self->config->{jabber}->{password},
+            Password => self->password,
             Alias    => 'jabber',
             States   => {
                 StatusEvent => 'status_handler',
@@ -53,9 +53,8 @@ sub START {
         )
     );
 
-    POE::Kernel->post( ircd => 'join_channel', self->config->{channel}, self->alias );
-    POE::Kernel->post( jabber => 'connect' );
-}
+    post jabber => 'connect';
+};
 
 event status_handler => sub {
     my ($state,) = get_args;
@@ -64,13 +63,12 @@ event status_handler => sub {
         debug "init finished";
         self->jid(self->jabber->jid);
 
-        POE::Kernel->post(jabber => 'output_handler', POE::Filter::XML::Node->new('presence'));
-        POE::Kernel->post(jabber => 'purge_queue');
+        post jabber => 'output_handler', POE::Filter::XML::Node->new('presence');
+        post jabber => 'purge_queue';
     }
 };
 
 event input_handler => sub {
-    my self = shift;
     my ($node,) = get_args;
 
     debug "recv:", $node->to_str;
@@ -80,9 +78,9 @@ event input_handler => sub {
     if ($body && $node->attr('from') =~ /^wassr-bot\@wassr\.jp/) {
         my ($nick, $text) = $body->data =~ /^([A-Za-z0-9_.-]+): (.*)/s;
         if ($nick && $text) {
-            POE::Kernel->post( ircd => 'publish_message', $nick, self->config->{channel}, $text );
+            publish_message $nick => $text;
         } else {
-            POE::Kernel->post( ircd => 'publish_notice', self->config->{channel}, $body->data );
+            publish_notice self->config->{channel} => $body->data;
         }
     }
 };
@@ -99,27 +97,27 @@ event send_message => sub {
 
     debug "send:", $node->to_str;
 
-    POE::Kernel->post( jabber => output_handler => $node );
+    post jabber => output_handler => $node;
 };
 
 event error_handler => sub {
     my ($error,) = get_args;
 
     if ( $error == +PCJ_SOCKETFAIL or $error == +PCJ_SOCKETDISCONNECT or $error == +PCJ_CONNECTFAIL ) {
-        print "Reconnecting!\n";
-        POE::Kernel->post( jabber => 'reconnect' );
+        debug "Reconnecting!";
+        post jabber => 'reconnect';
     }
     elsif ( $error == +PCJ_SSLFAIL ) {
-        print "TLS/SSL negotiation failed\n";
+        debug "TLS/SSL negotiation failed";
     }
     elsif ( $error == +PCJ_AUTHFAIL ) {
-        print "Failed to authenticate\n";
+        debug "Failed to authenticate";
     }
     elsif ( $error == +PCJ_BINDFAIL ) {
-        print "Failed to bind a resource\n";
+        debug "Failed to bind a resource";
     }
     elsif ( $error == +PCJ_SESSIONFAIL ) {
-        print "Failed to establish a session\n";
+        debug "Failed to establish a session";
     }
 };
 
