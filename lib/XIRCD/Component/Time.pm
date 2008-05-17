@@ -5,7 +5,7 @@ use XIRCD::Component;
 with qw(XIRCD::Role);
 
 has 'nick' => (
-    is => 'rw'
+    is  => 'rw',
     isa => 'Str',
 );
 
