@@ -8,14 +8,14 @@ use POE;
 use Config::Pit;
 use UNIVERSAL::require;
 
-use XIRCD::Component::Server;
+use XIRCD::Server;
 
 sub bootstrap {
     my $class = shift;
 
     my $config = $class->_load_conf;
 
-    XIRCD::Component::Server->new( config => $config->{ircd} );
+    XIRCD::Server->new( %{$config->{ircd}} );
 
     for my $component ( @{$config->{components}} ) {
         my $module = 'XIRCD::Component::' . $component->{module};

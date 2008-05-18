@@ -1,4 +1,4 @@
-package XIRCD::Component::Server;
+package XIRCD::Server;
 use strict;
 use MooseX::POE;
 
@@ -15,9 +15,34 @@ has 'ircd' => (
     is  => 'rw',
 );
 
-has 'config' => (
+has 'ircd_option' => (
     isa => 'HashRef',
     is  => 'rw',
+    default => sub { {} },
+);
+
+has 'servername' => (
+    isa => 'Str',
+    is  => 'rw',
+    default => sub { 'xircd' },
+);
+
+has 'server_nick' => (
+    isa => 'Str',
+    is  => 'rw',
+    default => sub { 'xircd' },
+);
+
+has 'port' => (
+    isa => 'Int',
+    is  => 'rw',
+    default => sub { 6667 },
+);
+
+has 'client_encoding' => (
+    isa => 'Str',
+    is  => 'rw',
+    default => sub { 'utf-8' },
 );
 
 has 'nicknames' => (
@@ -49,15 +74,16 @@ sub START {
 
     debug "start irc";
 
-    self->config->{servername} ||= 'xircd.ircd';
-    self->config->{client_encoding} ||= 'utf-8';
-
-    self->ircd(POE::Component::Server::IRC->spawn( config => clone(self->config) ));
+    self->ircd(
+        POE::Component::Server::IRC->spawn(
+            config => { servername => self->servername, %{ self->ircd_option } }
+        )
+    );
     self->ircd->yield('register');
     self->ircd->add_auth( mask => '*@*' );
-    self->ircd->add_listener( port => self->config->{port} || 6667 );
+    self->ircd->add_listener( port => self->port );
 
-    self->ircd->yield( add_spoofed_nick => { nick => self->config->{server_nick} } );
+    self->ircd->yield( add_spoofed_nick => { nick => self->server_nick } );
 }
 
 event ircd_daemon_join => sub {
@@ -65,7 +91,7 @@ event ircd_daemon_join => sub {
 
     return unless my($nick) = $user =~ /^([^!]+)!/;
     return if self->nicknames->{$channel}->{$nick};
-    return if $nick eq self->config->{server_nick};
+    return if $nick eq self->server_nick;
 
     self->joined->{$channel} = 1;
 
@@ -80,7 +106,7 @@ event ircd_daemon_quit => sub {
     my($user,) = get_args;
 
     return unless my($nick) = $user =~ /^([^!]+)!/;
-    return if $nick eq self->config->{server_nick};
+    return if $nick eq self->server_nick;
 
     for my $channel ( keys %{self->joined} ) {
         next if self->nicknames->{$channel}->{$nick};
@@ -93,14 +119,13 @@ event ircd_daemon_part => sub {
 
     return unless my($nick) = $user =~ /^([^!]+)!/;
     return if self->nicknames->{$channel}->{$nick};
-    return if $nick eq self->config->{server_nick};
+    return if $nick eq self->server_nick;
 
     self->joined->{$channel} = 0;
 };
 
 event ircd_daemon_public => sub {
     my($nick, $channel, $text) = get_args;
-    my $encoding = self->config->{client_encoding};
 
     debug "public [$channel] $nick : $text";
 
@@ -108,7 +133,7 @@ event ircd_daemon_public => sub {
     return unless $component;
     debug "send to $component";
 
-    post $component => send_message => decode( $encoding, $text );
+    post $component => send_message => decode( self->client_encoding, $text );
 };
 
 event _publish_message => sub {
@@ -123,7 +148,7 @@ event _publish_message => sub {
         self->ircd->yield( daemon_cmd_join => $nick, $channel );
     }
 
-    #$message = encode( self->config->{client_encoding}, $message );
+    #$message = encode( self->client_encoding, $message );
 
     if ( self->joined->{$channel} ) {
         self->ircd->yield( daemon_cmd_privmsg => $nick => $channel, $_ )
@@ -139,9 +164,9 @@ event _publish_notice => sub {
 
     debug "notice to irc: [$channel] $message";
 
-    #$message = encode( self->config->{client_encoding}, $message );
+    #$message = encode( self->client_encoding, $message );
 
-    self->ircd->yield( daemon_cmd_notice => self->config->{server_nick} => $channel, $_ )
+    self->ircd->yield( daemon_cmd_notice => self->server_nick => $channel, $_ )
         for split /\r?\n/, $message;
 };
 
@@ -152,7 +177,7 @@ event join_channel => sub {
     debug "register: $channel => $component";
 
     self->components->{$channel} = $component;
-    self->ircd->yield( daemon_cmd_join => self->config->{server_nick}, $channel );
+    self->ircd->yield( daemon_cmd_join => self->server_nick, $channel );
 };
 
 1;
