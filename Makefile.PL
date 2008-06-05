@@ -2,7 +2,15 @@ use inc::Module::Install;
 name 'XIRCD';
 all_from 'lib/XIRCD.pm';
 
-requires $_ for (qw/ /);
+# MooseX::POE 0.07 does not works with MooseX::AttributeHelper 0.08
+# SEE ALSO:  http://d.hatena.ne.jp/tokuhirom/20080605/1212663745
+requires 'MooseX::AttributeHelpers'  => 0.09;
+
+requires 'UNIVERSAL::require';
+requires 'POE';
+
+requires 'Moose'       => 0.48;
+requires 'MooseX::POE' => 0.07;
 
 build_requires 'Test::More';
 use_test_base;
