@@ -1,0 +1,20 @@
+---
+ircd: 
+  client_encoding: utf-8
+  port: 6667
+  server_nick: xircd
+  servername: xircd.local
+  ircd_option:
+    no_nick_tweaks: 1
+components:
+  - module: Twitter
+    screenname: user
+    username: user
+    password: pass
+    retry: 60
+  - module: Wassr
+    username: user@gmail.com
+    password: pass
+    server: talk.google.com
+    port: 5222
+

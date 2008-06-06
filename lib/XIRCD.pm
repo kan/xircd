@@ -5,15 +5,31 @@ use warnings;
 our $VERSION = '0.01';
 
 use POE;
-use Config::Pit;
+use POE::Component::TSTP;
 use UNIVERSAL::require;
+use Getopt::Long;
+use YAML;
 
 use XIRCD::Server;
+
 
 sub bootstrap {
     my $class = shift;
 
-    my $config = $class->_load_conf;
+    GetOptions('--config=s' => \my $conf, '--quiet' => \my $quiet);
+    $conf or die "Usage: xircd.pl --config=config.yaml\n";
+
+    my $config = YAML::LoadFile($conf) or die $!;
+
+    if ($quiet) {
+        close STDIN;
+        close STDOUT;
+        close STDERR;
+        exit if fork;
+    } else {
+        # for Ctrl-Z
+        POE::Component::TSTP->create();
+    }
 
     XIRCD::Server->new( %{$config->{ircd}} );
 
@@ -28,22 +44,6 @@ sub bootstrap {
     }
 
     POE::Kernel->run;
-}
-
-sub _load_conf {
-    return pit_get(
-        'XIRCD', require => {
-            ircd => {
-                port            => 6667,
-                server_nick     => 'xircd',
-                client_encoding => 'utf-8',
-                no_nick_tweaks  => 1,
-            },
-            components => [
-                { module => 'Time', nick => 'timer' },
-            ],
-        }
-    );
 }
 
 1;
