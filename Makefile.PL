@@ -9,6 +9,7 @@ requires 'MooseX::AttributeHelpers'  => 0.09;
 requires 'UNIVERSAL::require';
 requires 'POE';
 
+requires 'POE::Component::TSTP';
 requires 'Moose'       => 0.48;
 requires 'MooseX::POE' => 0.07;
 
