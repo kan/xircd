@@ -87,7 +87,10 @@ event friend_timeline_success => sub {
     my ( $response, ) = get_args;
 
     if ( $response->is_success ) {
-        my $ret = JSON::Any->jsonToObj($response->content);
+        my $ret;
+        eval {
+            $ ret = JSON::Any->jsonToObj($response->content);
+        };
         for my $line ( reverse @{ $ret || [] } ) {
             publish_message  $line->{user}->{screen_name} => $line->{text};
         }
