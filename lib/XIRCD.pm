@@ -1,35 +1,42 @@
 package XIRCD;
+use Moose;
 
-use strict;
-use warnings;
-our $VERSION = '0.01';
+with 'MooseX::Daemonize';
+
+our $VERSION = '0.0.1';
 
 use POE;
-use POE::Component::TSTP;
 use UNIVERSAL::require;
-use Getopt::Long;
 use YAML;
 
 use XIRCD::Server;
 
+has 'config' => (
+    is       => 'rw',
+    isa      => 'Str',
+    required => 1,
+);
+
+has 'daemon' => (
+    is      => 'rw',
+    isa     => 'Bool',
+    default => 0,
+);
+
+after 'start' => sub {
+    my $self = shift;
+    return unless $self->is_daemon;
+
+    $self->bootstrap;
+};
+
 
 sub bootstrap {
-    my $class = shift;
+    my $self = shift;
 
-    GetOptions('--config=s' => \my $conf, '--quiet' => \my $quiet);
-    $conf or die "Usage: xircd.pl --config=config.yaml\n";
+    $self->config or die "Usage: xircd.pl --config=config.yaml\n";
 
-    my $config = YAML::LoadFile($conf) or die $!;
-
-    if ($quiet) {
-        close STDIN;
-        close STDOUT;
-        close STDERR;
-        exit if fork;
-    } else {
-        # for Ctrl-Z
-        POE::Component::TSTP->create();
-    }
+    my $config = YAML::LoadFile($self->config) or die $!;
 
     XIRCD::Server->new( %{$config->{ircd}} );
 

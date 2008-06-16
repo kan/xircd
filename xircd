@@ -1,0 +1,20 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use File::Spec::Functions;
+use FindBin;
+use lib catfile($FindBin::Bin, 'lib');
+use XIRCD;
+
+my $xircd = XIRCD->new_with_options;
+my($command) = @{$xircd->extra_argv};
+die 'No command specified' unless $command;
+die "command $command not registered" if $command !~ /start|stop|restart|status/;
+
+$xircd->start   if $command eq 'start';
+$xircd->status  if $command eq 'status';
+$xircd->restart if $command eq 'restart';
+$xircd->stop    if $command eq 'stop';
+
+warn($xircd->status_message);
+exit($xircd->exit_code);

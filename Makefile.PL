@@ -8,12 +8,16 @@ requires 'MooseX::AttributeHelpers'  => 0.09;
 
 requires 'UNIVERSAL::require';
 requires 'POE';
+requires 'Sub::Exporter';
+requires 'Devel::Caller';
+requires 'self';
 
-requires 'POE::Component::TSTP';
-requires 'Moose'       => 0.48;
+requires 'Moose'       => 0.50;
 requires 'MooseX::POE' => 0.07;
+requires 'MooseX::Daemonize' => 0.07;
 
 build_requires 'Test::More';
+install_script 'xircd';
 use_test_base;
 auto_include;
 WriteAll;
