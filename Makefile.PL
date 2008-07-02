@@ -17,7 +17,7 @@ requires 'MooseX::POE' => 0.07;
 requires 'MooseX::Daemonize' => 0.07;
 
 build_requires 'Test::More';
-install_script 'xircd';
+install_script('xircd');
 use_test_base;
 auto_include;
 WriteAll;

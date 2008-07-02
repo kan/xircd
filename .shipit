@@ -1,3 +1,2 @@
-steps = CommitMessageWrap, FindVersion, ChangeVersion, CheckChangeLog, DistTest, Commit, Tag, MakeDist, UploadCPAN
+steps = FindVersion, ChangeVersion, CheckChangeLog, DistTest, Commit, Tag, MakeDist, UploadCPAN
 svk.tagpattern = release-%v
-commit_message.format = lang/perl/XIRCD: %msg
