@@ -45,6 +45,12 @@ has 'client_encoding' => (
     default => sub { 'utf-8' },
 );
 
+has auth => (
+    isa => 'ArrayRef',
+    is => 'rw',
+    default => sub { [ {master => '*@*'} ] },
+);
+
 has 'nicknames' => (
     isa => 'HashRef',
     is  => 'rw',
@@ -79,8 +85,10 @@ sub START {
             config => { servername => self->servername, %{ self->ircd_option } }
         )
     );
+    for my $auth (@{ self->auth }) {
+        self->ircd->add_auth( %{$auth} );
+    }
     self->ircd->yield('register');
-    self->ircd->add_auth( mask => '*@*' );
     self->ircd->add_listener( port => self->port );
 
     self->ircd->yield( add_spoofed_nick => { nick => self->server_nick } );

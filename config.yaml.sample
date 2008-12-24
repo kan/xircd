@@ -4,6 +4,9 @@ ircd:
   port: 6667
   server_nick: xircd
   servername: xircd.local
+# auth:
+#   - mask: '*@*'
+#     password: YOUR_OWN_PASSWORD
   ircd_option:
     no_nick_tweaks: 1
 components:
