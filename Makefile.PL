@@ -6,7 +6,6 @@ all_from 'lib/XIRCD.pm';
 # SEE ALSO:  http://d.hatena.ne.jp/tokuhirom/20080605/1212663745
 requires 'MooseX::AttributeHelpers'  => 0.09;
 
-requires 'UNIVERSAL::require' => 0.11;
 requires 'Exporter' => 5.63;
 requires 'Devel::Caller' => 2.03;
 requires 'self' => 0.32;

@@ -5,7 +5,6 @@ with 'MooseX::Getopt';
 our $VERSION = '0.0.1';
 
 use POE;
-use UNIVERSAL::require;
 use YAML;
 
 use XIRCD::Server;
@@ -31,7 +30,7 @@ sub bootstrap {
 
     for my $component ( @{$config->{components}} ) {
         my $module = 'XIRCD::Component::' . $component->{module};
-        $module->require or die $@;
+        Class::MOP::load_class($module);
         $module->new( 
             name    => lc($component->{module}),
             channel => '#' . lc($component->{module}),
