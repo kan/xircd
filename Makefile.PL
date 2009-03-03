@@ -8,7 +8,7 @@ requires 'MooseX::AttributeHelpers'  => 0.09;
 
 requires 'UNIVERSAL::require';
 requires 'POE' => 1.003;
-requires 'Sub::Exporter';
+requires 'Exporter' => 5.63;
 requires 'Devel::Caller';
 requires 'self';
 
