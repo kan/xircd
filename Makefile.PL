@@ -12,9 +12,9 @@ requires 'Sub::Exporter';
 requires 'Devel::Caller';
 requires 'self';
 
-requires 'Moose'       => 0.50;
-requires 'MooseX::POE' => 0.07;
-requires 'MooseX::Daemonize' => 0.07;
+requires 'Moose'       => 0.72;
+requires 'MooseX::POE' => 0.10;
+requires 'MooseX::Daemonize' => 0.08;
 
 build_requires 'Test::More';
 install_script('xircd');
