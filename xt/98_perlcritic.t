@@ -1,5 +1,4 @@
 use strict;
 use Test::More;
-eval { use Test::Perl::Critic -profile => 't/perlcriticrc' };
-plan skip_all => "Test::Perl::Critic is not installed." if $@;
+plan skip_all => 'cannot load Test::Perl::Critic' unless eval q{ use Test::Perl::Critic -profile => 'xt/perlcriticrc'; 1; };
 all_critic_ok('lib');
