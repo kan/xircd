@@ -7,7 +7,7 @@ all_from 'lib/XIRCD.pm';
 requires 'MooseX::AttributeHelpers'  => 0.09;
 
 requires 'UNIVERSAL::require';
-requires 'POE';
+requires 'POE' => 1.003;
 requires 'Sub::Exporter';
 requires 'Devel::Caller';
 requires 'self';
