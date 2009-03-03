@@ -1,7 +1,6 @@
 package XIRCD;
 use Moose;
-
-with 'MooseX::Daemonize';
+with 'MooseX::Getopt';
 
 our $VERSION = '0.0.1';
 
@@ -15,26 +14,16 @@ has 'config' => (
     is       => 'rw',
     isa      => 'Str',
     required => 1,
+    trigger  => sub {
+        my $self = shift;
+        unless (-f $self->config) {
+            Carp::croak 'configuration file not found: ' . $self->config;
+        }
+    }
 );
-
-has 'daemon' => (
-    is      => 'rw',
-    isa     => 'Bool',
-    default => 0,
-);
-
-after 'start' => sub {
-    my $self = shift;
-    return unless $self->is_daemon;
-
-    $self->bootstrap;
-};
-
 
 sub bootstrap {
     my $self = shift;
-
-    $self->config or die "Usage: xircd.pl --config=config.yaml\n";
 
     my $config = YAML::LoadFile($self->config) or die $!;
 
