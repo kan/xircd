@@ -1,7 +1,6 @@
 package XIRCD::Component::Time;
 use MooseX::POE;
 use XIRCD::Component;
-with qw(XIRCD::Role);
 
 has 'nick' => (
     is      => 'rw',

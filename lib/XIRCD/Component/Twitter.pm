@@ -2,8 +2,6 @@ package XIRCD::Component::Twitter;
 use MooseX::POE;
 use XIRCD::Component;
 
-with qw(XIRCD::Role);
-
 use Encode;
 use HTTP::Request::Common;
 use HTTP::Date ();

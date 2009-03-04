@@ -2,8 +2,6 @@ package XIRCD::Component::Rejaw;
 use MooseX::POE;
 use XIRCD::Component;
 
-with qw(XIRCD::Role);
-
 use POE qw( Component::Client::HTTP );
 use HTTP::Request::Common;
 use JSON::Any;

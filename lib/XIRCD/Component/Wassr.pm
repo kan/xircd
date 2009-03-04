@@ -2,8 +2,6 @@ package XIRCD::Component::Wassr;
 use MooseX::POE;
 use XIRCD::Component;
 
-with 'XIRCD::Role';
-
 use POE qw(
     Component::Jabber
     Component::Jabber::Error
