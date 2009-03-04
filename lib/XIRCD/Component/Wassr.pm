@@ -1,5 +1,4 @@
 package XIRCD::Component::Wassr;
-use strict;
 use MooseX::POE;
 use XIRCD::Component;
 

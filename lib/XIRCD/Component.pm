@@ -1,10 +1,19 @@
 package XIRCD::Component;
-use Moose;
+use strict;
+use warnings;
 use self;
 use Devel::Caller qw(caller_args);
-use Exporter 'import';
+use base 'Exporter';
 
 our @EXPORT = qw(self debug get_args http_alias yield delay post publish_message publish_notice);
+
+sub import {
+    strict->import;
+    warnings->import;
+
+    my $class = shift;
+    $class->export_to_level(1);
+}
 
 sub debug (@) { ## no critic.
     print @_, "\n" if $ENV{XIRCD_DEBUG};
