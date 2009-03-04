@@ -5,7 +5,7 @@ use self;
 use Devel::Caller qw(caller_args);
 use base 'Exporter';
 
-our @EXPORT = qw(self debug get_args http_alias yield delay post publish_message publish_notice);
+our @EXPORT = qw(self debug get_args yield delay post publish_message publish_notice);
 
 sub import {
     strict->import;
@@ -13,7 +13,10 @@ sub import {
 
     my $class = shift;
     my $mode = shift;
-    unless ($mode && $mode eq '-server') {
+    unless ($mode && $mode eq '-nocomponent') {
+        Moose->import({ into_level => 1 });
+        XIRCD::Base->_setup(scalar caller(0));
+        XIRCD::Base->export_to_level(1);
         Moose::Util::apply_all_roles(scalar caller(0), 'XIRCD::Role');
     }
     $class->export_to_level(1);

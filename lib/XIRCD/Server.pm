@@ -4,7 +4,7 @@ use XIRCD::Base;
 
 use Encode;
 
-use XIRCD::Component '-server';
+use XIRCD::Component '-nocomponent';
 use POE qw/Component::Server::IRC/;
 
 has 'ircd' => (

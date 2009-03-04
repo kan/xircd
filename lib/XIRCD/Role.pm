@@ -1,7 +1,6 @@
 package XIRCD::Role;
 use Moose::Role;
-use XIRCD::Component;
-with 'MooseX::POE::Aliased';
+use XIRCD::Component '-nocomponent';
 
 has name => (
     isa => 'Str',
@@ -19,7 +18,14 @@ sub START {
     debug "start " . $self->name;
 
     post ircd => 'join_channel', $self->channel, $self->get_session_id;
+
+    $self->init_component();
+
     yield 'start';
+}
+
+sub init_component {
+    # nop
 }
 
 1;

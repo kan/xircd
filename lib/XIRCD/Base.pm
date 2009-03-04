@@ -10,13 +10,21 @@ my $event_map;
 
 sub import {
     my $pkg = caller(0);
+    __PACKAGE__->_setup($pkg);
+    __PACKAGE__->export_to_level(1);
+}
+
+sub _setup {
+    my ($class, $pkg) = @_;
     $pkg->meta->add_attribute(
         poe_session_id => (
             is => 'rw',
             isa => 'Str',
         )
     );
-    __PACKAGE__->export_to_level(1);
+    $pkg->meta->add_method(
+        'get_session_id' => sub { shift->poe_session_id }
+    );
 }
 
 sub run {

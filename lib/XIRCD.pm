@@ -31,7 +31,7 @@ sub bootstrap {
     for my $component ( @{$config->{components}} ) {
         my $module = 'XIRCD::Component::' . $component->{module};
         Class::MOP::load_class($module);
-        $module->new( 
+        $module->run( 
             name    => lc($component->{module}),
             channel => '#' . lc($component->{module}),
             %{$component} 

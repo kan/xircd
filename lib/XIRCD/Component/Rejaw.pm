@@ -1,10 +1,9 @@
 package XIRCD::Component::Rejaw;
-use MooseX::POE;
 use XIRCD::Component;
 
 use POE qw( Component::Client::HTTP );
 use HTTP::Request::Common;
-use JSON::Any;
+use JSON;
 use URI;
 use Encode;
 
@@ -18,18 +17,23 @@ has 'username' => ( isa => 'Str', is => 'rw' );
 has 'counter'  => ( isa => 'Int', is => 'rw' );
 has 'cid'  => ( isa => 'Str', is => 'rw' );
 
-around 'new' => sub {
-    my $call = shift;
+has 'http_alias' => (
+    is => 'rw',
+    isa => 'Str',
+    default => sub {
+        my $self = shift;
+        "http_$self";
+    },
+);
 
-    my $self = $call->(@_);
+sub init_component {
+    my $self = shift;
 
     POE::Component::Client::HTTP->spawn(
         Agent => 'xircd_component_rejaw/0.1',
         Alias => $self->http_alias,
     );
-
-    return $self;
-};
+}
 
 event start => sub {
     my $create_session =
@@ -99,7 +103,7 @@ event got_conversation_shout_response => sub {
 
     if ( $response->is_success ) {
         debug 'got coversation_shout : ' . $response->as_string;
-        my $ret = JSON::Any->jsonToObj( $response->content );
+        my $ret = decode_json( $response->content );
         unless ( lc( $ret->{status} ) eq 'ok' ) {
             _error('failed to get session', $ret);
         }
@@ -118,7 +122,7 @@ event got_conversation_reply_response => sub {
 
     if ( $response->is_success ) {
         debug 'got coversation_reply : ' . $response->as_string;
-        my $ret = JSON::Any->jsonToObj( $response->content );
+        my $ret = decode_json( $response->content );
         unless ( lc( $ret->{status} ) eq 'ok' ) {
             _error('failed to get session', $ret);
         }
@@ -137,7 +141,7 @@ event got_session_create_response => sub {
 
     if ( $response->is_success ) {
         debug 'got session_create : ' . $response->as_string;
-        my $ret = JSON::Any->jsonToObj( $response->content );
+        my $ret = decode_json( $response->content );
         unless ( lc( $ret->{status} ) eq 'ok' ) {
             _error('failed to get session', $ret);
         }
@@ -167,7 +171,7 @@ event got_auth_signin_response => sub {
 
     if ( $response->is_success ) {
         debug 'got auth_signin : ' . $response->as_string;
-        my $ret = JSON::Any->jsonToObj( $response->content );
+        my $ret = decode_json( $response->content );
         unless ( lc( $ret->{status} ) eq 'ok' ) {
             _error('failed to subscribe', $ret);
         } else {
@@ -185,7 +189,7 @@ event got_subscription_subscribe_response => sub {
 
     if ( $response->is_success ) {
         debug 'got subscription_subscribe : ' . $response->as_string;
-        my $ret = JSON::Any->jsonToObj( $response->content );
+        my $ret = decode_json( $response->content );
         if ($ret->{status} eq 'ok') {
             self->counter( $ret->{counter} );
             yield event_observe => '';
@@ -241,7 +245,7 @@ event got_event_observe_response => sub {
 event handle_event_observe_response => sub {
     my ( $response ) = get_args;
 
-    my $ret = JSON::Any->new->jsonToObj( $response->content );
+    my $ret = decode_json( $response->content );
 
     if ($ret->{error}) {
         debug 'got error response: ' . $response->as_string;
@@ -293,7 +297,7 @@ event got_conversation_get_info => sub {
 
     if ( $response->is_success ) {
         debug 'got conversation get_info : ' . $response->as_string;
-        my $ret = JSON::Any->new->jsonToObj( $response->content );
+        my $ret = decode_json( $response->content );
         if ($ret->{status} eq 'ok') {
             for my $msg (@{ $ret->{conversations} }) {
                 publish_notice sprintf "%s [%s] %s: %s", uc($msg->{type}), $msg->{cid}, 

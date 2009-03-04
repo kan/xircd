@@ -1,5 +1,4 @@
 package XIRCD::Component::Time;
-use MooseX::POE;
 use XIRCD::Component;
 
 has 'nick' => (

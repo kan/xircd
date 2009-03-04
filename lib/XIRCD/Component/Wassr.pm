@@ -1,5 +1,4 @@
 package XIRCD::Component::Wassr;
-use MooseX::POE;
 use XIRCD::Component;
 
 use POE qw(
@@ -27,7 +26,7 @@ has 'jid' => (
     is      => 'rw',
 );
 
-event start => sub {
+sub init_component {
     debug "start wassr";
     my ($username, $hostname) = split '@', self->username;
 
@@ -49,7 +48,7 @@ event start => sub {
     );
 
     post jabber => 'connect';
-};
+}
 
 event status_handler => sub {
     my ($state,) = get_args;

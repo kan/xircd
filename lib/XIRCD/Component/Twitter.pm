@@ -1,11 +1,10 @@
 package XIRCD::Component::Twitter;
-use MooseX::POE;
 use XIRCD::Component;
 
 use Encode;
 use HTTP::Request::Common;
 use HTTP::Date ();
-use JSON::Any;
+use JSON;
 use POE qw( Component::Client::HTTP );
 use URI;
 
@@ -23,21 +22,28 @@ has 'since' => (
     is => 'rw',
 );
 
-around 'new' => sub {
-    my $call = shift;
+has 'http_alias' => (
+    is => 'rw',
+    isa => 'Str',
+    default => sub {
+        my $self = shift;
+        "http_$self";
+    },
+);
 
-    my $self = $call->(@_);
+sub init_component {
+    debug "alias of client::http is " . self->http_alias;
 
     POE::Component::Client::HTTP->spawn(
         Agent => 'xircd_component_twitter/0.1',
-        Alias => $self->http_alias,
+        Alias => self->http_alias,
     );
-
-    return $self;
-};
+}
 
 event send_message => sub {
     my ($status,) = get_args;
+
+    debug "send message $status";
 
     my $req = HTTP::Request::Common::POST(
         self->apiurl . '/update.json',
@@ -55,6 +61,8 @@ event start => sub {
     $uri->query_form(since => HTTP::Date::time2str(self->since)) if self->since;
     self->since(time);
 
+    debug "send request to $uri";
+
     my $req = HTTP::Request->new(GET => $uri);
     $req->authorization_basic(self->username, self->password);
 
@@ -64,17 +72,19 @@ event start => sub {
 event http_response => sub {
     my ($request_packet, $response_packet) = get_args;
 
+    debug "we seen http-response";
+
     my $request  = $request_packet->[0];
     my $response = $response_packet->[0];
 
     my $uri = $request->uri;
-    if ($uri =~ /update.json/) {
+    if ($uri =~ /update\.json/) {
         unless ($response->is_success) {
             yield response_error => $response;
             return;
         }
         yield update_success => $response;
-    } elsif ($uri =~ /friends_timeline.json/) {
+    } elsif ($uri =~ /friends_timeline\.json/) {
         yield friend_timeline_success => $response;
     }
 };
@@ -86,10 +96,12 @@ event friend_timeline_success => sub {
     if ( $response->is_success ) {
         my $ret;
         eval {
-            $ ret = JSON::Any->jsonToObj($response->content);
+            $ret = decode_json($response->content);
         };
-        for my $line ( reverse @{ $ret || [] } ) {
-            publish_message  $line->{user}->{screen_name} => $line->{text};
+        if ($ret && ref $ret eq 'ARRAY') {
+            for my $line ( reverse @{ $ret || [] } ) {
+                publish_message  $line->{user}->{screen_name} => $line->{text};
+            }
         }
     }
 
@@ -100,7 +112,7 @@ event update_success => sub {
     my ( $response, ) = get_args;
 
     if ( $response->is_success ) {
-        my $ret = JSON::Any->jsonToObj($response->content);
+        my $ret = decode_json($response->content);
         publish_notice $ret->{text};
     }
 };
