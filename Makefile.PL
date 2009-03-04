@@ -11,6 +11,10 @@ requires 'Moose'       => 0.72;
 requires 'POE' => 1.003;
 requires 'POE::Component::Server::IRC' => 1.38;
 
+recommends 'JSON' => 2.12;
+recommends 'POE::Component::Jabber' => 2.03;
+recommends 'POE::Component::Client::HTTP' => 0.88;
+
 build_requires 'Test::More';
 install_script('xircd');
 author_tests('xt');
