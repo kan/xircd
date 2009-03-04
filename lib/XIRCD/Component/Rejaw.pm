@@ -1,6 +1,8 @@
 package XIRCD::Component::Rejaw;
 use XIRCD::Component;
 
+# see http://subtech.g.hatena.ne.jp/sekimura/20080828/p1
+
 use POE qw( Component::Client::HTTP );
 use HTTP::Request::Common;
 use JSON;
