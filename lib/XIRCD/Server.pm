@@ -4,7 +4,6 @@ use MooseX::POE;
 
 with qw(MooseX::POE::Aliased);
 
-use Clone qw/clone/;
 use Encode;
 
 use XIRCD::Component;
