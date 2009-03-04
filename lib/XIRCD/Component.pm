@@ -12,6 +12,10 @@ sub import {
     warnings->import;
 
     my $class = shift;
+    my $mode = shift;
+    unless ($mode && $mode eq '-server') {
+        Moose::Util::apply_all_roles(scalar caller(0), 'XIRCD::Role');
+    }
     $class->export_to_level(1);
 }
 
