@@ -1,5 +1,5 @@
 package XIRCD::Server;
-use Moose;
+use Any::Moose;
 use XIRCD::Base;
 
 use Encode;
@@ -188,4 +188,5 @@ event join_channel => sub {
     self->ircd->yield( daemon_cmd_join => self->server_nick, $channel );
 };
 
-1;
+no Any::Moose;
+__PACKAGE__->meta->make_immutable;

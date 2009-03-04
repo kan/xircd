@@ -1,5 +1,5 @@
 package XIRCD::Role;
-use Moose::Role;
+use Any::Moose '::Role';
 use XIRCD::Component '-nocomponent';
 
 has name => (
@@ -17,7 +17,7 @@ sub START {
     $self->alias($self->name);
     debug "start " . $self->name;
 
-    post ircd => 'join_channel', $self->channel, $self->get_session_id;
+    post ircd => 'join_channel', $self->channel, $self->poe_session_id;
 
     $self->init_component();
 

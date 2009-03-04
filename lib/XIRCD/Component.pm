@@ -1,11 +1,22 @@
 package XIRCD::Component;
-use strict;
-use warnings;
+use Any::Moose;
 use self;
 use Devel::Caller qw(caller_args);
 use base 'Exporter';
 
 our @EXPORT = qw(self debug get_args yield delay post publish_message publish_notice);
+
+# XXX this is silly. mouse does not have enough feature!
+sub init_class {
+    my $klass = shift;
+    my $meta  = any_moose('::Meta::Class')->initialize($klass);
+    $meta->superclasses( any_moose('::Object') )
+      unless $meta->superclasses;
+
+    no strict 'refs';
+    no warnings 'redefine';
+    *{ $klass . '::meta' } = sub { $meta };
+}
 
 sub import {
     strict->import;
@@ -13,11 +24,19 @@ sub import {
 
     my $class = shift;
     my $mode = shift;
+    my $pkg = caller(0);
     unless ($mode && $mode eq '-nocomponent') {
-        Moose->import({ into_level => 1 });
+        if (Any::Moose::is_moose_loaded) {
+            Moose->import({ into_level => 1 });
+        } else {
+            init_class($pkg);
+            Mouse->export_to_level(1);
+        }
         XIRCD::Base->_setup(scalar caller(0));
         XIRCD::Base->export_to_level(1);
-        Moose::Util::apply_all_roles(scalar caller(0), 'XIRCD::Role');
+        any_moose('Util')->can('apply_all_roles')->(
+            scalar caller(0), 'XIRCD::Role'
+        );
     }
     $class->export_to_level(1);
 }
@@ -27,10 +46,6 @@ sub debug (@) { ## no critic.
 }
 
 sub get_args { return (caller_args(1))[10..20]; }
-
-sub http_alias {
-    return 'twitter_' . self->get_session_id;
-}
 
 sub yield (@) { ## no critic.
     POE::Kernel->yield(@_);

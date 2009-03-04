@@ -16,15 +16,24 @@ sub import {
 
 sub _setup {
     my ($class, $pkg) = @_;
-    $pkg->meta->add_attribute(
-        poe_session_id => (
-            is => 'rw',
-            isa => 'Str',
-        )
-    );
-    $pkg->meta->add_method(
-        'get_session_id' => sub { shift->poe_session_id }
-    );
+
+    # XXX this is silly. mouse does not have enough feature!
+    if (Any::Moose::is_moose_loaded) {
+        $pkg->meta->add_attribute(
+            poe_session_id => (
+                is => 'rw',
+                isa => 'Str',
+            )
+        );
+    } else {
+        my $meta = Mouse::Meta::Class->initialize($pkg);
+        Mouse::Meta::Attribute->create(
+            $meta, 'poe_session_id' => (
+                is => 'rw',
+                isa => 'Str',
+            )
+        );
+    }
 }
 
 sub run {
@@ -62,5 +71,4 @@ sub alias {
     $poe_kernel->alias_set($alias);
 }
 
-no Moose;
 1;

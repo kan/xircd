@@ -1,6 +1,6 @@
 package XIRCD;
-use Moose;
-with 'MooseX::Getopt';
+use Any::Moose;
+with any_moose('X::Getopt');
 
 our $VERSION = '0.0.1';
 
@@ -24,13 +24,15 @@ has 'config' => (
 sub bootstrap {
     my $self = shift;
 
+    print "run with ", (Any::Moose::is_moose_loaded() ? 'Moose' : 'Mouse'), "\n";
+
     my $config = YAML::LoadFile($self->config) or die $!;
 
     XIRCD::Server->run($config->{ircd});
 
     for my $component ( @{$config->{components}} ) {
         my $module = 'XIRCD::Component::' . $component->{module};
-        Class::MOP::load_class($module);
+        Any::Moose::load_class($module);
         $module->run( 
             name    => lc($component->{module}),
             channel => '#' . lc($component->{module}),
@@ -41,6 +43,8 @@ sub bootstrap {
     POE::Kernel->run;
 }
 
+no Any::Moose;
+__PACKAGE__->meta->make_immutable;
 1;
 __END__
 
