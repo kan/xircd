@@ -7,12 +7,10 @@ use Exporter 'import';
 our @EXPORT = qw(self debug get_args http_alias yield delay post publish_message publish_notice);
 
 sub debug (@) { ## no critic.
-    print @_, "\n\n" if $ENV{XIRCD_DEBUG};
+    print @_, "\n" if $ENV{XIRCD_DEBUG};
 }
 
-sub get_args {
-    return (caller_args(1))[10..20];
-}
+sub get_args { return (caller_args(1))[10..20]; }
 
 sub http_alias {
     return 'twitter_' . self->get_session_id;
@@ -31,18 +29,17 @@ sub post (@) { ## no critic.
 }
 
 sub publish_message ($$) {  ## no critic.
-    my $self = (caller_args(1))[0];
+    my $_self = (caller_args(1))[0];
     my ($nick, $text) = @_;
 
-    post ircd => '_publish_message' => $nick, $self->channel, $text;
+    post ircd => '_publish_message' => $nick, $_self->channel, $text;
 }
 
 sub publish_notice ($) {  ## no critic.
-    my $self = (caller_args(1))[0];
+    my $_self = (caller_args(1))[0];
     my ($text,) = @_;
 
-    post ircd => '_publish_notice' => $self->channel, $text;
+    post ircd => '_publish_notice' => $_self->channel, $text;
 }
-
 
 1;

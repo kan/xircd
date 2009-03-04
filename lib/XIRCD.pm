@@ -26,7 +26,7 @@ sub bootstrap {
 
     my $config = YAML::LoadFile($self->config) or die $!;
 
-    XIRCD::Server->new( %{$config->{ircd}} );
+    XIRCD::Server->run($config->{ircd});
 
     for my $component ( @{$config->{components}} ) {
         my $module = 'XIRCD::Component::' . $component->{module};

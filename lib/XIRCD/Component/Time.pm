@@ -3,19 +3,34 @@ use strict;
 use MooseX::POE;
 use XIRCD::Component;
 with qw(XIRCD::Role);
-use DateTime;
 
 has 'nick' => (
-    is  => 'rw',
-    isa => 'Str',
+    is      => 'rw',
+    isa     => 'Str',
+    default => 'time-bot',
+);
+
+has 'interval' => (
+    is => 'ro',
+    isa => 'Int',
+    default => 10,
 );
 
 event start => sub {
-    my $date = DateTime->now(time_zone => 'Asia/Tokyo');
-    publish_message self->nick => $date->strftime("%Y/%m/%d %H:%M:%S");
-    delay 'start', 10;
+    publish_message self->nick => time();
+    delay 'start', self->interval;
 };
 
-
 1;
+__END__
+
+=head1 NAME
+
+XIRCD::Component::Time - sample component for xircd
+
+=head1 AUTHORS
+
+kan fushihara
+
+tokuhiro matsuno
 

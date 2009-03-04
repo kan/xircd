@@ -1,8 +1,6 @@
 package XIRCD::Server;
-use strict;
-use MooseX::POE;
-
-with qw(MooseX::POE::Aliased);
+use Moose;
+use XIRCD::Base;
 
 use Encode;
 
@@ -75,22 +73,25 @@ has 'components' => (
 );
 
 sub START {
-    self->alias('ircd');
+    my $self = shift;
+    $self->alias('ircd');
 
     debug "start irc";
 
-    self->ircd(
-        POE::Component::Server::IRC->spawn(
-            config => { servername => self->servername, %{ self->ircd_option } }
-        )
+    my $ircd = POE::Component::Server::IRC->spawn(
+        config => { servername => $self->servername, %{ $self->ircd_option } }
     );
-    for my $auth (@{ self->auth }) {
-        self->ircd->add_auth( %{$auth} );
-    }
-    self->ircd->yield('register');
-    self->ircd->add_listener( port => self->port );
 
-    self->ircd->yield( add_spoofed_nick => { nick => self->server_nick } );
+    for my $auth (@{ $self->auth }) {
+        $ircd->add_auth( %{$auth} );
+    }
+    $ircd->yield('register');
+    $ircd->add_listener( port => $self->port );
+    $ircd->yield( add_spoofed_nick => { nick => $self->server_nick } );
+
+    debug "start server at localhost:" . $self->port . ' server nick is ' . $self->server_nick;
+
+    $self->ircd($ircd);
 }
 
 event ircd_daemon_join => sub {
