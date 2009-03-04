@@ -3,8 +3,6 @@ use strict;
 use MooseX::POE::Role;
 use XIRCD::Component;
 
-use Devel::Caller qw(caller_args);
-
 with qw(MooseX::POE::Aliased);
 
 has name => (
