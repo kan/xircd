@@ -6,9 +6,9 @@ requires 'Exporter' => 5.63;
 requires 'Devel::Caller' => 2.03;
 requires 'self' => 0.32;
 
-requires 'Moose'       => 0.72;
+requires 'Moose'       => 0.74;
 
-requires 'POE' => 1.003;
+requires 'POE' => 1.004;
 requires 'POE::Component::Server::IRC' => 1.38;
 
 recommends 'JSON' => 2.12;
