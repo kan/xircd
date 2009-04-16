@@ -8,3 +8,7 @@ __DATA__
 Kan Fushihara
 kan at mobilefactory do jp
 XIRCD
+fushihara
+matsuno
+tokuhiro
+xircd

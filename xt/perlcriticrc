@@ -1,4 +1,4 @@
 [TestingAndDebugging::ProhibitNoStrict]
 allow=refs
 [TestingAndDebugging::RequireUseStrict]
-equivalent_modules = Mouse Mouse::Role XIRCD::Component
+equivalent_modules = Mouse Mouse::Role XIRCD::Component Any::Moose
