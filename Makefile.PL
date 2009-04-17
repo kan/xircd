@@ -3,7 +3,7 @@ name 'XIRCD';
 all_from 'lib/XIRCD.pm';
 
 requires 'Exporter' => 5.63;
-requires 'Devel::Caller' => 2.03;
+requires 'Devel::Caller::Perl' => 1.4;
 requires 'self' => 0.32;
 
 requires 'Any::Moose' => 0.06;
