@@ -7,7 +7,8 @@ use HTTP::Date ();
 use JSON;
 use POE qw( Component::Client::HTTP );
 use URI;
-use DB_File;
+
+with 'XIRCD::Role::Dedup';
 
 has 'apiurl'   => ( isa => 'Str', is => 'rw', default => sub { 'http://twitter.com/statuses' } );
 has 'apihost'  => ( isa => 'Str', is => 'rw', default => sub { 'twitter.com:80' } );
@@ -17,14 +18,6 @@ has 'screenname' => ( isa => 'Str', is => 'rw' );
 has 'username'   => ( isa => 'Str', is => 'rw' );
 has 'password'   => ( isa => 'Str', is => 'rw' );
 has 'retry'      => ( isa => 'Int', is => 'rw', default => sub { 60 } );
-has 'deduper' => (
-    is => 'ro',
-    isa => 'HashRef',
-    default => sub {
-        tie my %hash, 'DB_File';
-        \%hash;
-    },
-);
 
 has 'http_alias' => (
     is => 'rw',
