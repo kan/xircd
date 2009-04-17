@@ -7,7 +7,7 @@ use HTTP::Date ();
 use JSON;
 use POE qw( Component::Client::HTTP );
 use URI;
-
+use DB_File;
 
 has 'apiurl'   => ( isa => 'Str', is => 'rw', default => sub { 'http://twitter.com/statuses' } );
 has 'apihost'  => ( isa => 'Str', is => 'rw', default => sub { 'twitter.com:80' } );
@@ -17,9 +17,13 @@ has 'screenname' => ( isa => 'Str', is => 'rw' );
 has 'username'   => ( isa => 'Str', is => 'rw' );
 has 'password'   => ( isa => 'Str', is => 'rw' );
 has 'retry'      => ( isa => 'Int', is => 'rw', default => sub { 60 } );
-
-has 'since' => (
-    is => 'rw',
+has 'deduper' => (
+    is => 'ro',
+    isa => 'HashRef',
+    default => sub {
+        tie my %hash, 'DB_File';
+        \%hash;
+    },
 );
 
 has 'http_alias' => (
@@ -58,8 +62,6 @@ event start => sub {
     debug "read twitter";
 
     my $uri = URI->new(self->apiurl . '/friends_timeline.json');
-    $uri->query_form(since => HTTP::Date::time2str(self->since)) if self->since;
-    self->since(time);
 
     debug "send request to $uri";
 
@@ -100,6 +102,7 @@ event friend_timeline_success => sub {
         };
         if ($ret && ref $ret eq 'ARRAY') {
             for my $line ( reverse @{ $ret || [] } ) {
+                next if self->deduper->{$line->{id}}++;
                 publish_message  $line->{user}->{screen_name} => $line->{text};
             }
         }
