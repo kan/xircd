@@ -12,3 +12,4 @@ fushihara
 matsuno
 tokuhiro
 xircd
+rss
