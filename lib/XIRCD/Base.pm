@@ -2,6 +2,7 @@ package XIRCD::Base;
 use strict;
 use warnings;
 use base 'Exporter';
+use Any::Moose;
 use POE;
 
 our @EXPORT = qw/run event alias/;

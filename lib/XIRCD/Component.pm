@@ -1,8 +1,8 @@
 package XIRCD::Component;
 use Any::Moose;
-use self;
 use Devel::Caller::Perl qw(called_args);
 use base 'Exporter';
+use XIRCD::Base;
 
 our @EXPORT = qw(self debug get_args yield delay post publish_message publish_notice);
 
@@ -39,6 +39,10 @@ sub import {
         );
     }
     $class->export_to_level(1);
+}
+
+sub self {
+  return (called_args(0))[0];
 }
 
 sub debug (@) { ## no critic.
