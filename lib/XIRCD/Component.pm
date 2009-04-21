@@ -1,6 +1,5 @@
 package XIRCD::Component;
 use Any::Moose;
-use self;
 use Devel::Caller::Perl qw(called_args);
 use base 'Exporter';
 
@@ -39,6 +38,10 @@ sub import {
         );
     }
     $class->export_to_level(1);
+}
+
+sub self () {
+    (called_args(0))[0];
 }
 
 sub debug (@) { ## no critic.
