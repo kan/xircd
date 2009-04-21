@@ -45,6 +45,7 @@ sub run {
             _start => sub {
                 $self->poe_session_id( $_[SESSION]->ID );
                 $self->START();
+                $_[KERNEL]->sig('INT' => sub { die "sigint received\n" });
             },
         },
         object_states => [
