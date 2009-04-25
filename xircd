@@ -4,6 +4,7 @@ use warnings;
 use File::Spec::Functions;
 use FindBin;
 use lib catfile($FindBin::Bin, 'lib');
+use lib catfile($FindBin::Bin, 'extlib');
 use XIRCD;
 
 XIRCD->new_with_options->bootstrap;
