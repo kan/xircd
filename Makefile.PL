@@ -2,6 +2,7 @@ use inc::Module::Install;
 name 'XIRCD';
 all_from 'lib/XIRCD.pm';
 
+# this module requires one xs: Net::SSLeay
 requires 'Exporter' => 5.63;
 requires 'Devel::Caller::Perl' => 1.4;
 
