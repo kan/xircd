@@ -2,8 +2,15 @@ package XIRCD::Component;
 use Any::Moose;
 use Devel::Caller::Perl qw(called_args);
 use base 'Exporter';
+use Coro::Specific;
 
-our @EXPORT = qw(self debug get_args yield delay post publish_message publish_notice);
+{
+    my $context = Coro::Specific->new;
+    sub context { $$context }
+    sub set_context { $$context = $_[0] }
+}
+
+our @EXPORT = qw(self debug get_args yield delay post publish_message publish_notice context set_context);
 
 # XXX this is silly. mouse does not have enough feature!
 sub init_class {
@@ -63,14 +70,14 @@ sub post (@) { ## no critic.
 }
 
 sub publish_message ($$) {  ## no critic.
-    my $_self = (called_args(0))[0];
+    my $_self = context;
     my ($nick, $text) = @_;
 
     post ircd => '_publish_message' => $nick, $_self->channel, $text;
 }
 
 sub publish_notice ($) {  ## no critic.
-    my $_self = (called_args(0))[0];
+    my $_self = context;
     my ($text,) = @_;
 
     post ircd => '_publish_notice' => $_self->channel, $text;

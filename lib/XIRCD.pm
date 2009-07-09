@@ -4,6 +4,10 @@ with any_moose('X::Getopt');
 
 our $VERSION = '0.0.1';
 
+use Coro;
+use Coro::AnyEvent;
+use AnyEvent;
+use AnyEvent::Impl::POE;
 use POE;
 use YAML;
 
@@ -33,14 +37,26 @@ sub bootstrap {
     for my $component ( @{$config->{components}} ) {
         my $module = 'XIRCD::Component::' . $component->{module};
         Any::Moose::load_class($module);
+        my $channel = '#' . lc($component->{module});
         $module->run( 
             name    => lc($component->{module}),
-            channel => '#' . lc($component->{module}),
+            channel => $channel,
             %{$component} 
         );
+        print "spawned $module at $channel\n";
     }
 
-    POE::Kernel->run;
+    # are you running?
+    my $w = AnyEvent->timer(
+        after    => 0.5,
+        interval => 1,
+        cb       => sub {
+            warn "running\n";
+        }
+    );
+
+    local $SIG{INT} = sub { die "SIGINT" };
+    AnyEvent->condvar->recv;
 }
 
 no Any::Moose;

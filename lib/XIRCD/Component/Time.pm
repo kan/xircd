@@ -1,5 +1,8 @@
 package XIRCD::Component::Time;
 use XIRCD::Component;
+use Coro;
+use Coro::AnyEvent;
+use AnyEvent;
 
 has 'nick' => (
     is      => 'rw',
@@ -13,9 +16,18 @@ has 'interval' => (
     default => 10,
 );
 
-event start => sub {
-    publish_message self->nick => time();
-    delay 'start', self->interval;
+event 'start' => sub {
+    my $self = shift;
+
+    async {
+        set_context $self;
+
+        while (1) {
+            debug 'time-loop';
+            publish_message context->nick => time();
+            Coro::AnyEvent::sleep(context->interval);
+        }
+    };
 };
 
 1;
