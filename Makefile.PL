@@ -12,14 +12,14 @@ requires 'POE::Component::Server::IRC' => 1.38;
 
 requires 'AnyEvent' => 4.8;
 requires 'AnyEvent::HTTP' => 1.4;
+requires 'AnyEvent::XMPP' => 0.5;
 requires 'JSON' => 2.12;
 requires 'Coro' => 5.151;
 
-recommends 'Mouse' => 0.21;
-recommends 'POE::Component::Jabber' => 2.03;
-recommends 'XML::Feed';
-recommends 'XML::Feed::Deduper';
-recommends 'URI';
+requires 'Mouse' => 0.21;
+requires 'XML::Feed';
+requires 'XML::Feed::Deduper';
+requires 'URI';
 
 build_requires 'Test::More';
 install_script('xircd');
