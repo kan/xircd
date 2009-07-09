@@ -18,7 +18,7 @@ sub _setup {
     my ($class, $pkg) = @_;
 
     # XXX this is silly. mouse does not have enough feature!
-    if (Any::Moose::is_moose_loaded) {
+    if (Any::Moose::moose_is_preferred) {
         $pkg->meta->add_attribute(
             poe_session_id => (
                 is => 'rw',

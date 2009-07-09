@@ -25,7 +25,7 @@ sub import {
     my $mode = shift;
     my $pkg = caller(0);
     unless ($mode && $mode eq '-nocomponent') {
-        if (Any::Moose::is_moose_loaded) {
+        if (Any::Moose::moose_is_preferred) {
             Moose->import({ into_level => 1 });
         } else {
             init_class($pkg);

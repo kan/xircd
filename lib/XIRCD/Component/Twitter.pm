@@ -95,6 +95,7 @@ event friend_timeline_success => sub {
         };
         if ($ret && ref $ret eq 'ARRAY') {
             for my $line ( reverse @{ $ret || [] } ) {
+                warn "ID IS @{[ $line->{id} ]}";
                 next if self->deduper->{$line->{id}}++;
                 publish_message  $line->{user}->{screen_name} => $line->{text};
             }
