@@ -4,6 +4,7 @@ use Coro;
 use Coro::AnyEvent;
 use Coro::LWP;
 use AnyEvent;
+use LWP::UserAgent;
 
 use Encode;
 use HTTP::Request::Common;
