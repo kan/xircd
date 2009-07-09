@@ -24,7 +24,7 @@ has 'config' => (
 sub bootstrap {
     my $self = shift;
 
-    print "run with ", (Any::Moose::is_moose_loaded() ? 'Moose' : 'Mouse'), "\n";
+    print "run with ", (Any::Moose::moose_is_preferred() ? 'Moose' : 'Mouse'), "\n";
 
     my $config = YAML::LoadFile($self->config) or die $!;
 
