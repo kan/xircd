@@ -57,6 +57,7 @@ sub init_component {
     $self->jabber($cl);
 }
 
+# FIXME: this routine doesn't works
 event send_message => sub {
     my $self = $_[0];
     my ($message,) = get_args;
