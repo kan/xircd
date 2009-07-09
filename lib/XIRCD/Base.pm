@@ -17,23 +17,12 @@ sub import {
 sub _setup {
     my ($class, $pkg) = @_;
 
-    # XXX this is silly. mouse does not have enough feature!
-    if (Any::Moose::moose_is_preferred) {
-        $pkg->meta->add_attribute(
-            poe_session_id => (
-                is => 'rw',
-                isa => 'Str',
-            )
-        );
-    } else {
-        my $meta = Mouse::Meta::Class->initialize($pkg);
-        Mouse::Meta::Attribute->create(
-            $meta, 'poe_session_id' => (
-                is => 'rw',
-                isa => 'Str',
-            )
-        );
-    }
+    $pkg->meta->add_attribute(
+        poe_session_id => (
+            is => 'rw',
+            isa => 'Str',
+        )
+    );
 }
 
 sub run {

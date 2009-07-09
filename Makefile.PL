@@ -16,7 +16,7 @@ requires 'AnyEvent::XMPP' => 0.5;
 requires 'JSON' => 2.12;
 requires 'Coro' => 5.151;
 
-requires 'Mouse' => 0.21;
+requires 'Mouse' => 0.27;
 requires 'XML::Feed';
 requires 'XML::Feed::Deduper';
 requires 'URI';
