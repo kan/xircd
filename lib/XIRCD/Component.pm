@@ -4,7 +4,7 @@ use Devel::Caller::Perl qw(called_args);
 use base 'Exporter';
 use Coro::Specific;
 
-our @EXPORT = qw(self debug get_args yield delay post publish_message publish_notice timer);
+our @EXPORT = qw(self debug get_args yield post publish_message publish_notice timer);
 
 # XXX this is silly. mouse does not have enough feature!
 sub init_class {
@@ -54,11 +54,6 @@ sub get_args { return (called_args(0))[10..20]; }
 
 sub yield (@) { ## no critic.
     POE::Kernel->yield(@_);
-}
-
-# TODO: deprecate
-sub delay (@) { ## no critic.
-    POE::Kernel->delay(@_);
 }
 
 sub post (@) { ## no critic.
