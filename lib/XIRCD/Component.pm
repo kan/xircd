@@ -4,7 +4,7 @@ use Devel::Caller::Perl qw(called_args);
 use base 'Exporter';
 use Coro::Specific;
 
-our @EXPORT = qw(self debug get_args yield post publish_message publish_notice timer);
+our @EXPORT = qw(debug get_args yield post publish_message publish_notice timer);
 
 sub import {
     strict->import;
@@ -22,11 +22,6 @@ sub import {
         );
     }
     $class->export_to_level(1);
-}
-
-# TODO: deprecate
-sub self () {
-    (called_args(0))[0];
 }
 
 sub debug (@) { ## no critic.

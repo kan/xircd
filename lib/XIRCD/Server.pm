@@ -6,6 +6,11 @@ use Encode;
 
 use XIRCD::Component '-nocomponent';
 use POE qw/Component::Server::IRC/;
+use Devel::Caller::Perl qw/called_args/;
+
+sub self () {
+    (called_args(0))[0];
+}
 
 has 'ircd' => (
     isa => 'POE::Component::Server::IRC',
