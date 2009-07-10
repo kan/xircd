@@ -38,16 +38,15 @@ sub init_component {
             debug "got message";
 
             async {
-                set_context $self;
                 my $from = $msg->from;
                 my $body = $msg->any_body;
                 debug "'$body' from '$from'";
                 if ($body && $from =~ /^wassr-bot\@wassr\.jp/) {
                     my ($nick, $text) = $body =~ /^([A-Za-z0-9_.-]+): (.*)/s;
                     if ($nick && $text) {
-                        publish_message $nick => $text;
+                        $self->publish_message($nick => $text);
                     } else {
-                        publish_message 'wassr' => $body;
+                        $self->publish_message('wassr' => $body);
                     }
                 }
             };
