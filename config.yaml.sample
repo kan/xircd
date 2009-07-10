@@ -15,11 +15,11 @@ components:
     interval: 1
   - module: RSS
     url: http://api.wassr.jp/public_timeline.rss
-  - module: Twitter
-    screenname: jkljkl11
-    username: jkljkl11
-    password: jkljkl11
-    retry: 60
+# - module: Twitter
+#   screenname: jkljkl11
+#   username: jkljkl11
+#   password: jkljkl11
+#   retry: 60
 # - module: Wassr
 #   username: user@gmail.com
 #   password: pass

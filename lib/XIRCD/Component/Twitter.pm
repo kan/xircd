@@ -32,40 +32,37 @@ has ua => (
 
 # call update.json
 event send_message => sub {
-    my $self = $_[0];
+    my $self = shift;
     my ($status,) = get_args;
 
     debug "send message $status";
 
     async {
-        set_context $self;
-
         my $req = HTTP::Request::Common::POST(
-            context->apiurl . '/update.json',
+            $self->apiurl . '/update.json',
             [ status => encode('utf-8',$status) ],
         );  
-        $req->authorization_basic(context->username, context->password);
-        my $res = context->ua->request($req);
+        $req->authorization_basic($self->username, $self->password);
+        my $res = $self->ua->request($req);
         if ($res->is_success) {
             my $ret = decode_json($res->content);
-            publish_message 'twitter', "updated: $ret->{text}";
+            $self->publish_message('twitter', "updated: $ret->{text}");
         } else {
-            publish_message 'twitter', 'cannot update';
+            $self->publish_message('twitter', 'cannot update');
         }
     };
 };
 
 event start => sub {
-    my $self = $_[0];
+    my $self = shift;
     debug "read twitter";
 
-    async {
-        set_context $self;
-
-        while (1) {
-            my $req = HTTP::Request->new(GET => context->apiurl . '/friends_timeline.json');
-            $req->authorization_basic(context->username, context->password);
-            my $res = context->ua->request($req);
+    timer(
+        interval => $self->retry,
+        cb => sub {
+            my $req = HTTP::Request->new(GET => $self->apiurl . '/friends_timeline.json');
+            $req->authorization_basic($self->username, $self->password);
+            my $res = $self->ua->request($req);
 
             if ( $res->is_success ) {
                 my $ret;
@@ -75,17 +72,15 @@ event start => sub {
                 if ($ret && ref $ret eq 'ARRAY') {
                     for my $line ( reverse @{ $ret || [] } ) {
                         warn "ID IS @{[ $line->{id} ]}";
-                        next if context->deduper->{$line->{id}}++;
-                        publish_message  $line->{user}->{screen_name} => $line->{text};
+                        next if $self->deduper->{$line->{id}}++;
+                        $self->publish_message($line->{user}->{screen_name} => $line->{text});
                     }
                 }
             } else {
                 debug "cannot get a content from twitter";
             }
-
-            Coro::AnyEvent::sleep(context->retry);
-        }
-    };
+        },
+    );
 };
 
 1;

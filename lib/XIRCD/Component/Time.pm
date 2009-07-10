@@ -19,15 +19,13 @@ has 'interval' => (
 event 'start' => sub {
     my $self = shift;
 
-    async {
-        set_context $self;
-
-        while (1) {
+    timer(
+        interval => $self->interval,
+        cb => sub{
             debug 'time-loop';
-            publish_message context->nick => time();
-            Coro::AnyEvent::sleep(context->interval);
+            $self->publish_message($self->nick => time());
         }
-    };
+    );
 };
 
 1;

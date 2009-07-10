@@ -4,13 +4,7 @@ use Devel::Caller::Perl qw(called_args);
 use base 'Exporter';
 use Coro::Specific;
 
-{
-    my $context = Coro::Specific->new;
-    sub context { $$context }
-    sub set_context { $$context = $_[0] }
-}
-
-our @EXPORT = qw(self debug get_args yield delay post publish_message publish_notice context set_context);
+our @EXPORT = qw(self debug get_args yield delay post publish_message publish_notice timer);
 
 # XXX this is silly. mouse does not have enough feature!
 sub init_class {
@@ -47,6 +41,7 @@ sub import {
     $class->export_to_level(1);
 }
 
+# TODO: deprecate
 sub self () {
     (called_args(0))[0];
 }
@@ -61,6 +56,7 @@ sub yield (@) { ## no critic.
     POE::Kernel->yield(@_);
 }
 
+# TODO: deprecate
 sub delay (@) { ## no critic.
     POE::Kernel->delay(@_);
 }
@@ -69,18 +65,34 @@ sub post (@) { ## no critic.
     POE::Kernel->post(@_);
 }
 
-sub publish_message ($$) {  ## no critic.
-    my $_self = context;
-    my ($nick, $text) = @_;
+sub publish_message {  ## no critic.
+    my ($_self, $nick, $text) = @_;
 
     post ircd => '_publish_message' => $nick, $_self->channel, $text;
 }
 
-sub publish_notice ($) {  ## no critic.
-    my $_self = context;
-    my ($text,) = @_;
-
-    post ircd => '_publish_notice' => $_self->channel, $text;
+{
+    my @timers;
+    sub timer {
+        my %args = @_;
+        debug "new timer: $args{interval}";
+        push @timers, AnyEvent->timer(
+            after => 1,
+            interval => $args{interval},
+            cb => sub {
+                debug "called timer";
+                my $coro = Coro->new($args{cb});
+                $coro->ready;
+            },
+        );
+    }
 }
+
+#ub publish_notice ($) {  ## no critic.
+#   my $_self = context;
+#   my ($text,) = @_;
+
+#   post ircd => '_publish_notice' => $_self->channel, $text;
+#
 
 1;
