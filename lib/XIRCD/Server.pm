@@ -15,6 +15,7 @@ sub get_args { return ( called_args(0) )[ 10 .. 20 ]; }
 
     sub BUILD {
         my $self = shift;
+        debug "BUILDING SERVER";
 
         POE::Session->create(
             inline_states => {
@@ -111,7 +112,7 @@ has 'client_encoding' => (
 has auth => (
     isa => 'ArrayRef',
     is => 'rw',
-    default => sub { [ {master => '*@*'} ] },
+    default => sub { +[ {mask => '*@*'} ] },
 );
 
 has 'nicknames' => (
