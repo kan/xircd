@@ -12,13 +12,13 @@ sub import {
 
     my $class = shift;
     my $mode = shift;
-    my $pkg = caller(0);
+    my $caller = caller(0);
     unless ($mode && $mode eq '-nocomponent') {
         any_moose()->import({into_level => 1});
         XIRCD::Base->_setup(scalar caller(0));
         XIRCD::Base->export_to_level(1);
         any_moose('Util')->can('apply_all_roles')->(
-            scalar caller(0), 'XIRCD::Role'
+            $caller, 'XIRCD::Role'
         );
     }
     $class->export_to_level(1);
@@ -60,12 +60,5 @@ sub publish_message {  ## no critic.
         );
     }
 }
-
-#ub publish_notice ($) {  ## no critic.
-#   my $_self = context;
-#   my ($text,) = @_;
-
-#   post ircd => '_publish_notice' => $_self->channel, $text;
-#
 
 1;
