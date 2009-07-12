@@ -39,12 +39,7 @@ sub bootstrap {
         async_pool {
             my $module = 'XIRCD::Component::' . $component->{module};
             Any::Moose::load_class($module);
-            my $channel = '#' . lc($component->{module});
-            my $obj = $module->new( 
-                name    => lc($component->{module}),
-                channel => $channel,
-                %{$component} 
-            );
+            my $obj = $module->new($component);
             $server->register($obj);
             print "spawned $module at $channel\n";
         };
