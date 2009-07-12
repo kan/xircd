@@ -21,11 +21,9 @@ __END__
 
 =head1 NAME
 
-XIRCD::Component::Time - sample component for xircd
+XIRCD::Component::Echo - sample component for xircd
 
 =head1 AUTHORS
-
-kan fushihara
 
 tokuhiro matsuno
 
