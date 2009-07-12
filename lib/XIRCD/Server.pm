@@ -185,7 +185,9 @@ event ircd_daemon_public => sub {
     return unless $component;
     debug "send to $component";
 
-    $component->receive_message(decode(self->client_encoding, $text));
+    if ($component->can('receive_message')) {
+        $component->receive_message(decode(self->client_encoding, $text));
+    }
 };
 
 event _publish_message => sub {
