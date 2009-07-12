@@ -2,7 +2,6 @@ package XIRCD::Component;
 use Any::Moose;
 use Devel::Caller::Perl qw(called_args);
 use base 'Exporter';
-use Coro::Specific;
 
 our @EXPORT = qw(debug get_args yield post publish_message publish_notice timer);
 
