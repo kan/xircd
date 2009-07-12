@@ -30,8 +30,6 @@ sub bootstrap {
 
     print "run with ", (Any::Moose::moose_is_preferred() ? 'Moose' : 'Mouse'), "\n";
 
-    my $done = AnyEvent->condvar;
-
     my $config = YAML::LoadFile($self->config) or die $!;
 
     XIRCD::Server->run($config->{ircd});
@@ -58,7 +56,7 @@ sub bootstrap {
     );
 
     local $SIG{INT} = sub { die "SIGINT" };
-    $done->recv;
+    AnyEvent->condvar->recv;
 }
 
 no Any::Moose;
