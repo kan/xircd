@@ -41,7 +41,7 @@ sub bootstrap {
             Any::Moose::load_class($module);
             my $obj = $module->new($component);
             $server->register($obj);
-            print "spawned $module at $channel\n";
+            print "spawned $module at @{[ $obj->channel ]}\n";
         };
     }
 

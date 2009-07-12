@@ -24,6 +24,9 @@ sub get_args { return ( called_args(0) )[ 10 .. 20 ]; }
                     $self->START;
                     $_[KERNEL]->sig('INT' => sub { die "sigint received\n" });
                 },
+                _default => sub {
+                    debug 'default: ' . $_[ARG0];
+                },
             },
             object_states => [
                 $self => \%SERVER_EVENTS,
@@ -72,6 +75,8 @@ sub START {
     debug "start server at localhost:" . $self->port . ' server nick is ' . $self->server_nick;
 
     $self->ircd($ircd);
+
+    undef;
 }
 
 has 'ircd' => (
