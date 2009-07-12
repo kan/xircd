@@ -9,13 +9,13 @@ ircd:
 #     password: YOUR_OWN_PASSWORD
   ircd_option:
     no_nick_tweaks: 1
-components: []
+components:
 # - module: Time
 #   nick: time
 #   interval: 1
 # - module: RSS
 #   url: http://search.cpan.org/uploads.rdf
-# - module: Echo
+  - module: Echo
 # - module: Twitter
 #   screenname: jkljkl11
 #   username: jkljkl11
