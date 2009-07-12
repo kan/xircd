@@ -16,7 +16,7 @@ has 'interval' => (
     default => 10,
 );
 
-event 'start' => sub {
+sub init {
     my $self = shift;
 
     timer(
@@ -26,7 +26,7 @@ event 'start' => sub {
             $self->publish_message($self->nick => time());
         }
     );
-};
+}
 
 1;
 __END__

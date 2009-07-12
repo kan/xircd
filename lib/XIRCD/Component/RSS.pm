@@ -55,7 +55,7 @@ has follow_redirects => (
     default => 2,
 );
 
-event start => sub {
+sub init {
     my $self = shift;
     debug "read rss";
 
@@ -91,7 +91,7 @@ event start => sub {
             }
         }
     );
-};
+}
 
 1;
 __END__

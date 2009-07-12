@@ -20,7 +20,7 @@ has 'jid' => (
     is      => 'rw',
 );
 
-sub init_component {
+sub init {
     my $self = shift;
     debug "start wassr";
 
@@ -57,12 +57,11 @@ sub init_component {
 }
 
 # FIXME: this routine doesn't works
-event send_message => sub {
-    my $self = $_[0];
-    my ($message,) = get_args;
+sub receive_message {
+    my ($self, $message) = @_;
 
     debug "send:", $message;
     $self->jabber->send_message('test', 'wassr-bot@wassr.jp');
-};
+}
 
 1;

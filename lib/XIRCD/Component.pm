@@ -1,46 +1,31 @@
 package XIRCD::Component;
 use Any::Moose;
 use Devel::Caller::Perl qw(called_args);
+use XIRCD::Util qw/debug/;
 use base 'Exporter';
+use POE;
 
-our @EXPORT = qw(debug get_args yield post publish_message publish_notice timer);
+our @EXPORT = qw(debug publish_message timer);
 
 sub import {
-    strict->import;
-    warnings->import;
-
     my $class = shift;
     my $mode = shift;
     my $caller = caller(0);
-    unless ($mode && $mode eq '-nocomponent') {
-        any_moose()->import({into_level => 1});
-        XIRCD::Base->_setup(scalar caller(0));
-        XIRCD::Base->export_to_level(1);
-        any_moose('Util')->can('apply_all_roles')->(
-            $caller, 'XIRCD::Role'
-        );
-    }
+
+    strict->import;
+    warnings->import;
+
+    any_moose()->import({into_level => 1});
+    any_moose('Util')->can('apply_all_roles')->(
+        $caller, 'XIRCD::Role::Component'
+    );
     $class->export_to_level(1);
-}
-
-sub debug (@) { ## no critic.
-    print @_, "\n" if $ENV{XIRCD_DEBUG};
-}
-
-sub get_args { return (called_args(0))[10..20]; }
-
-sub yield (@) { ## no critic.
-    POE::Kernel->yield(@_);
-}
-
-sub post (@) { ## no critic.
-    POE::Kernel->post(@_);
 }
 
 sub publish_message {  ## no critic.
     my ($_self, $nick, $text) = @_;
 
-    post ircd => '_publish_message' => $nick, $_self->channel, $text;
+    $poe_kernel->post(ircd => '_publish_message' => $nick, $_self->channel, $text);
 }
 
 {

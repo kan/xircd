@@ -31,9 +31,8 @@ has ua => (
 );
 
 # call update.json
-event send_message => sub {
-    my $self = shift;
-    my ($status,) = get_args;
+sub receive_message {
+    my ($self, $status) = @_;
 
     debug "send message $status";
 
@@ -51,9 +50,9 @@ event send_message => sub {
             $self->publish_message('twitter', 'cannot update');
         }
     };
-};
+}
 
-event start => sub {
+sub init {
     my $self = shift;
     debug "read twitter";
 
@@ -81,7 +80,7 @@ event start => sub {
             }
         },
     );
-};
+}
 
 1;
 

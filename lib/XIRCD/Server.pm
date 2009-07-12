@@ -1,15 +1,76 @@
 package XIRCD::Server;
 use Any::Moose;
-use XIRCD::Base;
+use XIRCD::Util qw/debug/;
 
 use Encode;
 
-use XIRCD::Component '-nocomponent';
 use POE qw/Component::Server::IRC/;
 use Devel::Caller::Perl qw/called_args/;
 
-sub self () {
-    (called_args(0))[0];
+sub self ()  { ( called_args(0) )[0]; }
+sub get_args { return ( called_args(0) )[ 10 .. 20 ]; }
+
+{
+    my %SERVER_EVENTS;
+
+    sub BUILD {
+        my $self = shift;
+
+        POE::Session->create(
+            inline_states => {
+                _start => sub {
+                    debug 'start ircd session';
+                    $self->START;
+                    $_[KERNEL]->sig('INT' => sub { die "sigint received\n" });
+                },
+            },
+            object_states => [
+                $self => \%SERVER_EVENTS,
+            ],
+        );
+    }
+
+    sub event ($&) {
+        my $pkg = caller(0);
+        my ( $event_name, $cb ) = @_;
+
+        my $method_name = "__event_$event_name";
+        $pkg->meta->add_method( $method_name => $cb );
+        $SERVER_EVENTS{$event_name} = $method_name;
+    }
+
+    sub register {
+        my ($self, $component) = @_;
+        my $channel = $component->channel;
+
+        debug "join channel: $channel";
+        debug "register: $channel => $component";
+
+        $self->components->{$channel} = $component;
+        $self->ircd->yield( daemon_cmd_join => $self->server_nick, $channel );
+    }
+}
+
+sub START {
+    my $self = self;
+    debug "start irc";
+
+    $poe_kernel->alias_set('ircd');
+
+    my $ircd = POE::Component::Server::IRC->spawn(
+        config => { servername => $self->servername, %{ $self->ircd_option } }
+    );
+
+    for my $auth (@{ $self->auth }) {
+        $ircd->add_auth( %{$auth} );
+    }
+    $ircd->yield('register');
+    $ircd->add_listener( port => $self->port );
+    $ircd->yield( add_spoofed_nick => { nick => $self->server_nick } );
+
+    debug "start server at localhost:" . $self->port . ' server nick is ' . $self->server_nick;
+
+    $self->ircd($ircd);
 }
 
 has 'ircd' => (
@@ -77,28 +138,6 @@ has 'components' => (
     default => sub { {} },
 );
 
-sub START {
-    my $self = shift;
-    $self->alias('ircd');
-
-    debug "start irc";
-
-    my $ircd = POE::Component::Server::IRC->spawn(
-        config => { servername => $self->servername, %{ $self->ircd_option } }
-    );
-
-    for my $auth (@{ $self->auth }) {
-        $ircd->add_auth( %{$auth} );
-    }
-    $ircd->yield('register');
-    $ircd->add_listener( port => $self->port );
-    $ircd->yield( add_spoofed_nick => { nick => $self->server_nick } );
-
-    debug "start server at localhost:" . $self->port . ' server nick is ' . $self->server_nick;
-
-    $self->ircd($ircd);
-}
-
 event ircd_daemon_join => sub {
     my($user, $channel) = get_args;
 
@@ -146,7 +185,7 @@ event ircd_daemon_public => sub {
     return unless $component;
     debug "send to $component";
 
-    post $component => send_message => decode( self->client_encoding, $text );
+    $component->receive_message(decode(self->client_encoding, $text));
 };
 
 event _publish_message => sub {
@@ -181,16 +220,6 @@ event _publish_notice => sub {
 
     self->ircd->yield( daemon_cmd_notice => self->server_nick => $channel, $_ )
         for split /\r?\n/, $message;
-};
-
-event join_channel => sub {
-    my ($channel, $component) = get_args;
-
-    debug "join channel: $channel";
-    debug "register: $channel => $component";
-
-    self->components->{$channel} = $component;
-    self->ircd->yield( daemon_cmd_join => self->server_nick, $channel );
 };
 
 no Any::Moose;

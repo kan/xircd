@@ -32,18 +32,22 @@ sub bootstrap {
 
     my $config = YAML::LoadFile($self->config) or die $!;
 
-    XIRCD::Server->run($config->{ircd});
+    my $server = XIRCD::Server->new($config->{ircd});
 
     for my $component ( @{$config->{components}} ) {
-        my $module = 'XIRCD::Component::' . $component->{module};
-        Any::Moose::load_class($module);
-        my $channel = '#' . lc($component->{module});
-        $module->run( 
-            name    => lc($component->{module}),
-            channel => $channel,
-            %{$component} 
-        );
-        print "spawned $module at $channel\n";
+        # please wait main loop
+        async_pool {
+            my $module = 'XIRCD::Component::' . $component->{module};
+            Any::Moose::load_class($module);
+            my $channel = '#' . lc($component->{module});
+            my $obj = $module->new( 
+                name    => lc($component->{module}),
+                channel => $channel,
+                %{$component} 
+            );
+            $server->register($obj);
+            print "spawned $module at $channel\n";
+        };
     }
 
     # are you running?

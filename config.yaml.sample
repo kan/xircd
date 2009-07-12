@@ -14,7 +14,8 @@ components:
     nick: time
     interval: 1
   - module: RSS
-    url: http://api.wassr.jp/public_timeline.rss
+    url: http://search.cpan.org/uploads.rdf
+  - module: Echo
 # - module: Twitter
 #   screenname: jkljkl11
 #   username: jkljkl11
