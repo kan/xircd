@@ -6,3 +6,4 @@ pm_to_blib
 *.sw[po]
 extlib/lib/perl5/i486-linux-gnu-thread-multi/*
 extlib/man/
+config.yaml
