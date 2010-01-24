@@ -31,7 +31,7 @@ sub publish_message {  ## no critic.
     sub timer {
         my %args = @_;
         debug "new timer: $args{interval}";
-        push @timers, AE::timer(
+        push @timers, AnyEvent->timer(
             after => 1,
             interval => $args{interval},
             cb => sub {
