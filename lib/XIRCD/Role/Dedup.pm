@@ -12,3 +12,4 @@ has 'deduper' => (
 );
 
 no Any::Moose '::Role';
+1;
