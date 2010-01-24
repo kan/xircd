@@ -1,9 +1,8 @@
 package XIRCD::Component;
 use Any::Moose;
-use Devel::Caller::Perl qw(called_args);
 use XIRCD::Util qw/debug/;
+use AE;
 use base 'Exporter';
-use POE;
 
 our @EXPORT = qw(debug publish_message timer);
 
@@ -24,8 +23,7 @@ sub import {
 
 sub publish_message {  ## no critic.
     my ($_self, $nick, $text) = @_;
-
-    $poe_kernel->post(ircd => '_publish_message' => $nick, $_self->channel, $text);
+    XIRCD->context->server->publish_message($nick, $_self->channel, $text);
 }
 
 {
@@ -33,11 +31,11 @@ sub publish_message {  ## no critic.
     sub timer {
         my %args = @_;
         debug "new timer: $args{interval}";
-        push @timers, AnyEvent->timer(
+        push @timers, AE::timer(
             after => 1,
             interval => $args{interval},
             cb => sub {
-                debug "called timer";
+                # debug "called timer";
                 my $coro = Coro->new($args{cb});
                 $coro->ready;
             },

@@ -1,46 +1,50 @@
 package XIRCD::Server;
 use Any::Moose;
 use XIRCD::Util qw/debug/;
+use AnyEvent::IRC::Server;
+use AnyEvent::IRC::Util qw/prefix_nick/;
 
 use Encode;
-
-use POE qw/Component::Server::IRC/;
-use Devel::Caller::Perl qw/called_args/;
-
-sub self ()  { ( called_args(0) )[0]; }
-sub get_args { return ( called_args(0) )[ 10 .. 20 ]; }
 
 {
     my %SERVER_EVENTS;
 
-    sub BUILD {
+    sub _build_ircd {
         my $self = shift;
         debug "BUILDING SERVER";
 
-        POE::Session->create(
-            inline_states => {
-                _start => sub {
-                    debug 'start ircd session';
-                    $self->START;
-                    $_[KERNEL]->sig('INT' => sub { die "sigint received\n" });
-                },
-                _default => sub {
-                    debug 'default: ' . $_[ARG0];
-                },
-            },
-            object_states => [
-                $self => \%SERVER_EVENTS,
-            ],
+        my $ircd = AnyEvent::IRC::Server->new(
+            servername => $self->servername,
+            port       => $self->port,
+            %{ $self->ircd_option },
         );
+        $ircd->reg_cb(do {
+            my %cb;
+            while ( my ($name, $code) = each %SERVER_EVENTS ) {
+                $cb{$name} = sub { $code->($self, @_) };
+            }
+            %cb;
+        });
+
+#       for my $auth (@{ $self->auth }) {
+#           $ircd->add_auth( %{$auth} );
+#       }
+#       $ircd->add_spoofed_nick($self->server_nick);
+
+        $ircd->run();
+
+        debug "start server at localhost:" . $self->port . ' server nick is ' . $self->server_nick;
+
+        return $ircd;
     }
 
-    sub event ($&) {
-        my $pkg = caller(0);
+    sub event ($&) { ## no critic
+        # my $pkg = caller(0);
         my ( $event_name, $cb ) = @_;
 
-        my $method_name = "__event_$event_name";
-        $pkg->meta->add_method( $method_name => $cb );
-        $SERVER_EVENTS{$event_name} = $method_name;
+        # my $method_name = "__event_$event_name";
+        # $pkg->meta->add_method( $method_name => $cb );
+        $SERVER_EVENTS{$event_name} = $cb;
     }
 
     sub register {
@@ -51,37 +55,15 @@ sub get_args { return ( called_args(0) )[ 10 .. 20 ]; }
         debug "register: $channel => $component";
 
         $self->components->{$channel} = $component;
-        $self->ircd->yield( daemon_cmd_join => $self->server_nick, $channel );
+        $self->ircd->daemon_cmd_join( $self->server_nick, $channel );
     }
-}
-
-sub START {
-    my $self = self;
-    debug "start irc";
-
-    $poe_kernel->alias_set('ircd');
-
-    my $ircd = POE::Component::Server::IRC->spawn(
-        config => { servername => $self->servername, %{ $self->ircd_option } }
-    );
-
-    for my $auth (@{ $self->auth }) {
-        $ircd->add_auth( %{$auth} );
-    }
-    $ircd->yield('register');
-    $ircd->add_listener( port => $self->port );
-    $ircd->yield( add_spoofed_nick => { nick => $self->server_nick } );
-
-    debug "start server at localhost:" . $self->port . ' server nick is ' . $self->server_nick;
-
-    $self->ircd($ircd);
-
-    undef;
 }
 
 has 'ircd' => (
-    isa => 'POE::Component::Server::IRC',
+    isa => 'AnyEvent::IRC::Server',
     is  => 'rw',
+    lazy => 1,
+    builder => '_build_ircd',
 );
 
 has 'ircd_option' => (
@@ -144,91 +126,95 @@ has 'components' => (
     default => sub { {} },
 );
 
-event ircd_daemon_join => sub {
-    my($user, $channel) = get_args;
+event daemon_join => sub {
+    my ($self, $ircd, $nick, $channel) = @_;
+    $nick = prefix_nick($nick);
 
-    return unless my($nick) = $user =~ /^([^!]+)!/;
-    return if self->nicknames->{$channel}->{$nick};
-    return if $nick eq self->server_nick;
+    return if $self->nicknames->{$channel}->{$nick};
+    return if $nick eq $self->server_nick;
 
-    self->joined->{$channel} = 1;
+    $self->joined->{$channel} = 1;
 
-    for my $message ( @{ self->message_stack->{$channel} || [] } ) {
-        self->ircd->yield( daemon_cmd_privmsg => $message->{nick}, $channel, $_ )
-            for split /\r?\n/, $message->{text};
+    for my $message ( @{ $self->message_stack->{$channel} || [] } ) {
+        $self->ircd->daemon_cmd_privmsg(
+            $message->{nick},
+            $channel,
+            $message->{text},
+        );
     }
-    self->message_stack->{$channel} = [];
+    $self->message_stack->{$channel} = [];
 };
 
-event ircd_daemon_quit => sub {
-    my($user,) = get_args;
+#   event ircd_daemon_quit => sub {
+#       my($user,) = get_args;
 
-    return unless my($nick) = $user =~ /^([^!]+)!/;
-    return if $nick eq self->server_nick;
+#       return unless my($nick) = $user =~ /^([^!]+)!/;
+#       return if $nick eq self->server_nick;
 
-    for my $channel ( keys %{self->joined} ) {
-        next if self->nicknames->{$channel}->{$nick};
-        self->joined->{$channel} = 0;
-    }
-};
+#       for my $channel ( keys %{self->joined} ) {
+#           next if self->nicknames->{$channel}->{$nick};
+#           self->joined->{$channel} = 0;
+#       }
+#   };
 
-event ircd_daemon_part => sub {
-    my($user, $channel) = get_args;
+#   event ircd_daemon_part => sub {
+#       my($user, $channel) = get_args;
 
-    return unless my($nick) = $user =~ /^([^!]+)!/;
-    return if self->nicknames->{$channel}->{$nick};
-    return if $nick eq self->server_nick;
+#       return unless my($nick) = $user =~ /^([^!]+)!/;
+#       return if self->nicknames->{$channel}->{$nick};
+#       return if $nick eq self->server_nick;
 
-    self->joined->{$channel} = 0;
-};
+#       self->joined->{$channel} = 0;
+#   };
 
-event ircd_daemon_public => sub {
-    my($nick, $channel, $text) = get_args;
+event daemon_privmsg => sub {
+    my ($self, $nick, $channel, $text) = @_;
 
     debug "public [$channel] $nick : $text";
 
-    my $component = self->components->{$channel};
+    my $component = $self->components->{$channel};
     return unless $component;
     debug "send to $component";
 
     if ($component->can('receive_message')) {
-        $component->receive_message(decode(self->client_encoding, $text));
+        $component->receive_message(decode($self->client_encoding, $text));
     }
 };
 
-event _publish_message => sub {
-    my ($nick, $channel, $message) = get_args;
+sub publish_message {
+    my ($self, $nick, $channel, $message) = @_;
 
     debug "publish to irc: [$channel] $nick : $message";
 
-    self->nicknames->{$channel} ||= {};
-    if ($nick && !self->nicknames->{$channel}->{$nick}) {
-        self->nicknames->{$channel}->{$nick}++;
-        self->ircd->yield( add_spoofed_nick => { nick => $nick } );
-        self->ircd->yield( daemon_cmd_join => $nick, $channel );
+    $self->nicknames->{$channel} ||= {};
+    if ($nick && !$self->nicknames->{$channel}->{$nick}) {
+        $self->nicknames->{$channel}->{$nick}++;
+#       $self->ircd->yield( add_spoofed_nick => { nick => $nick } );
+        $self->ircd->daemon_cmd_join( $nick, $channel );
     }
 
     #$message = encode( self->client_encoding, $message );
 
-    if ( self->joined->{$channel} ) {
-        self->ircd->yield( daemon_cmd_privmsg => $nick => $channel, $_ )
+    if ( $self->joined->{$channel} ) {
+        $self->ircd->daemon_cmd_privmsg( $nick => $channel, $_ )
             for split /\r?\n/, $message;
     } else {
-        self->message_stack->{$channel} ||= [];
-        push @{self->message_stack->{$channel}}, { nick => $nick, text => $message };
+        debug "not joined channel: $channel";
+        $self->message_stack->{$channel} ||= [];
+        push @{$self->message_stack->{$channel}}, { nick => $nick, text => $message };
     }
-};
+}
 
-event _publish_notice => sub {
-    my ($channel, $message) = get_args;
+#   event _publish_notice => sub {
+#       my ($channel, $message) = get_args;
 
-    debug "notice to irc: [$channel] $message";
+#       debug "notice to irc: [$channel] $message";
 
-    #$message = encode( self->client_encoding, $message );
+#       #$message = encode( self->client_encoding, $message );
 
-    self->ircd->yield( daemon_cmd_notice => self->server_nick => $channel, $_ )
-        for split /\r?\n/, $message;
-};
+#       self->ircd->yield( daemon_cmd_notice => self->server_nick => $channel, $_ )
+#           for split /\r?\n/, $message;
+#   };
 
 no Any::Moose;
 __PACKAGE__->meta->make_immutable;

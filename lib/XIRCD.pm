@@ -1,42 +1,53 @@
 package XIRCD;
 use Any::Moose;
-with any_moose('X::Getopt');
 
 our $VERSION = '0.0.1';
 
 use Coro;
 use Coro::AnyEvent;
 use AnyEvent;
-use AnyEvent::Impl::POE;
-use POE;
 use YAML;
+use Getopt::Long;
+use Pod::Usage;
 
 use XIRCD::Server;
 
-has 'config' => (
-    is       => 'rw',
-    isa      => 'Str',
-    required => 1,
-    trigger  => sub {
-        my $self = shift;
-        unless (-f $self->config) {
-            Carp::croak 'configuration file not found: ' . $self->config;
-        }
-    }
+{
+    my $_context;
+    sub context { $_context }
+    sub set_context { $_context = $_[1] }
+}
+
+has server => (
+    is => 'rw',
+    isa => 'XIRCD::Server',
 );
 
 sub bootstrap {
     my $self = shift;
 
+    XIRCD->set_context($self);
+
+    my $conffile = 'config.yaml';
+    GetOptions(
+        'c|config=s' => \$conffile,
+    );
+    pod2usage() unless $conffile;
+    unless (-f $conffile) {
+        Carp::croak "configuration file not found: $conffile";
+    }
+
     print "run with ", (Any::Moose::moose_is_preferred() ? 'Moose' : 'Mouse'), "\n";
 
-    my $config = YAML::LoadFile($self->config) or die $!;
+    my $config = YAML::LoadFile($conffile) or die $!;
 
     my $server = XIRCD::Server->new($config->{ircd});
+    $self->server( $server );
 
+    my @coros;
     for my $component ( @{$config->{components}} ) {
         # please wait main loop
-        async_pool {
+        push @coros, async {
             my $module = 'XIRCD::Component::' . $component->{module};
             Any::Moose::load_class($module);
             my $obj = $module->new($component);
@@ -46,15 +57,14 @@ sub bootstrap {
     }
 
     # are you running?
-    my $w = AnyEvent->timer(
-        after    => 0.5,
-        interval => 1,
-        cb       => sub {
-            warn "running\n";
-        }
-    );
+#   my $w = AnyEvent->timer(
+#       after    => 0.5,
+#       interval => 1,
+#       cb       => sub {
+#           warn "running\n";
+#       }
+#   );
 
-    local $SIG{INT} = sub { die "SIGINT" };
     AnyEvent->condvar->recv;
 }
 
@@ -69,7 +79,7 @@ XIRCD -
 
 =head1 SYNOPSIS
 
-  use XIRCD;
+    % xircd -c config.yaml
 
 =head1 DESCRIPTION
 
