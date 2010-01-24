@@ -46,17 +46,6 @@ use Encode;
         # $pkg->meta->add_method( $method_name => $cb );
         $SERVER_EVENTS{$event_name} = $cb;
     }
-
-    sub register {
-        my ($self, $component) = @_;
-        my $channel = $component->channel;
-
-        debug "join channel: $channel";
-        debug "register: $channel => $component";
-
-        $self->components->{$channel} = $component;
-        $self->ircd->daemon_cmd_join( $self->server_nick, $channel );
-    }
 }
 
 has 'ircd' => (
@@ -205,6 +194,18 @@ sub publish_message {
         $self->message_stack->{$channel} ||= [];
         push @{$self->message_stack->{$channel}}, { nick => $nick, text => $message };
     }
+}
+
+# register the component to ircd
+sub register {
+    my ($self, $component) = @_;
+    my $channel = $component->channel;
+
+    debug "join channel: $channel";
+    debug "register: $channel => $component";
+
+    $self->components->{$channel} = $component;
+    $self->ircd->daemon_cmd_join( $self->server_nick, $channel );
 }
 
 no Any::Moose;
