@@ -145,27 +145,29 @@ event daemon_join => sub {
     $self->message_stack->{$channel} = [];
 };
 
-#   event ircd_daemon_quit => sub {
-#       my($user,) = get_args;
+# TODO: implement in AnyEvent::IRC::Server
+event daemon_quit => sub {
+    my ($self, $nick) = @_;
+    $nick = prefix_nick($nick);
 
-#       return unless my($nick) = $user =~ /^([^!]+)!/;
-#       return if $nick eq self->server_nick;
+    return if $nick eq $self->server_nick;
 
-#       for my $channel ( keys %{self->joined} ) {
-#           next if self->nicknames->{$channel}->{$nick};
-#           self->joined->{$channel} = 0;
-#       }
-#   };
+    for my $channel ( keys %{$self->joined} ) {
+        next if $self->nicknames->{$channel}->{$nick};
+        $self->joined->{$channel} = 0;
+    }
+};
 
-#   event ircd_daemon_part => sub {
-#       my($user, $channel) = get_args;
+# TODO: implement in AnyEvent::IRC::Server
+event daemon_part => sub {
+    my ($self, $nick, $channel) = @_;
+    $nick = prefix_nick($nick);
 
-#       return unless my($nick) = $user =~ /^([^!]+)!/;
-#       return if self->nicknames->{$channel}->{$nick};
-#       return if $nick eq self->server_nick;
+    return if $self->nicknames->{$channel}->{$nick};
+    return if $nick eq $self->server_nick;
 
-#       self->joined->{$channel} = 0;
-#   };
+    $self->joined->{$channel} = 0;
+};
 
 event daemon_privmsg => sub {
     my ($self, $nick, $channel, $text) = @_;
@@ -204,17 +206,6 @@ sub publish_message {
         push @{$self->message_stack->{$channel}}, { nick => $nick, text => $message };
     }
 }
-
-#   event _publish_notice => sub {
-#       my ($channel, $message) = get_args;
-
-#       debug "notice to irc: [$channel] $message";
-
-#       #$message = encode( self->client_encoding, $message );
-
-#       self->ircd->yield( daemon_cmd_notice => self->server_nick => $channel, $_ )
-#           for split /\r?\n/, $message;
-#   };
 
 no Any::Moose;
 __PACKAGE__->meta->make_immutable;
