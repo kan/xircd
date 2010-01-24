@@ -4,7 +4,7 @@ use XIRCD::Util qw/debug/;
 use AnyEvent::IRC::Server;
 use AnyEvent::IRC::Util qw/prefix_nick/;
 
-use Encode;
+use Encode ();
 
 {
     my %SERVER_EVENTS;
@@ -103,6 +103,7 @@ has 'message_stack' => (
     default => sub { {} },
 );
 
+# Is any user joined to the channel?
 has 'joined' => (
     isa => 'HashRef',
     is  => 'rw',
@@ -118,6 +119,7 @@ has 'components' => (
 event daemon_join => sub {
     my ($self, $ircd, $nick, $channel) = @_;
     $nick = prefix_nick($nick);
+    debug "-- daemon_join: $nick, $channel";
 
     return if $self->nicknames->{$channel}->{$nick};
     return if $nick eq $self->server_nick;
@@ -125,10 +127,11 @@ event daemon_join => sub {
     $self->joined->{$channel} = 1;
 
     for my $message ( @{ $self->message_stack->{$channel} || [] } ) {
+        my $text = Encode::encode( $self->client_encoding, $message->{text} );
         $self->ircd->daemon_cmd_privmsg(
             $message->{nick},
             $channel,
-            $message->{text},
+            $text,
         );
     }
     $self->message_stack->{$channel} = [];
@@ -168,7 +171,7 @@ event daemon_privmsg => sub {
     debug "send to $component";
 
     if ($component->can('receive_message')) {
-        $component->receive_message(decode($self->client_encoding, $text));
+        $component->receive_message(Encode::decode($self->client_encoding, $text));
     }
 };
 
@@ -184,9 +187,8 @@ sub publish_message {
         $self->ircd->daemon_cmd_join( $nick, $channel );
     }
 
-    #$message = encode( self->client_encoding, $message );
-
     if ( $self->joined->{$channel} ) {
+        $message = Encode::encode( $self->client_encoding, $message );
         $self->ircd->daemon_cmd_privmsg( $nick => $channel, $_ )
             for split /\r?\n/, $message;
     } else {
