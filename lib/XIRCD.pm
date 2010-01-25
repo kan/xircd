@@ -23,10 +23,15 @@ has server => (
     isa => 'XIRCD::Server',
 );
 
-sub bootstrap {
-    my $self = shift;
+has config => (
+    is       => 'rw',
+    isa      => 'HashRef',
+    required => 1,
+);
 
-    XIRCD->set_context($self);
+sub new_with_options {
+    my $class = shift;
+    my @args = @_ == 1 ? %{$_[0]} : @_;
 
     my $conffile = 'config.yaml';
     GetOptions(
@@ -40,6 +45,15 @@ sub bootstrap {
     print "run with ", (Any::Moose::moose_is_preferred() ? 'Moose' : 'Mouse'), "\n";
 
     my $config = YAML::LoadFile($conffile) or die $!;
+    return $class->new(config => $config, @args);
+}
+
+sub BUILD {
+    my $self = shift;
+
+    XIRCD->set_context($self);
+
+    my $config = $self->config();
 
     my $server = XIRCD::Server->new($config->{ircd});
     $self->server( $server );
@@ -55,17 +69,6 @@ sub bootstrap {
             print "spawned $module at @{[ $obj->channel ]}\n";
         };
     }
-
-    # are you running?
-#   my $w = AnyEvent->timer(
-#       after    => 0.5,
-#       interval => 1,
-#       cb       => sub {
-#           warn "running\n";
-#       }
-#   );
-
-    AnyEvent->condvar->recv;
 }
 
 no Any::Moose;

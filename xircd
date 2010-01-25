@@ -6,5 +6,8 @@ use FindBin;
 use lib catfile($FindBin::Bin, 'lib');
 use lib catfile($FindBin::Bin, 'extlib');
 use XIRCD;
+use AE;
 
-XIRCD->new()->bootstrap();
+XIRCD->new_with_options();
+AE::cv()->recv();
+
