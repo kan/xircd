@@ -139,7 +139,7 @@ event daemon_join => sub {
 
 # TODO: implement in AnyEvent::IRC::Server
 event daemon_quit => sub {
-    my ($self, $nick) = @_;
+    my ($self, $ircd, $nick) = @_;
     $nick = prefix_nick($nick);
 
     return if $nick eq $self->server_nick;
@@ -152,7 +152,7 @@ event daemon_quit => sub {
 
 # TODO: implement in AnyEvent::IRC::Server
 event daemon_part => sub {
-    my ($self, $nick, $channel) = @_;
+    my ($self, $ircd, $nick, $channel) = @_;
     $nick = prefix_nick($nick);
 
     return if $self->nicknames->{$channel}->{$nick};
@@ -162,7 +162,7 @@ event daemon_part => sub {
 };
 
 event daemon_privmsg => sub {
-    my ($self, $nick, $channel, $text) = @_;
+    my ($self, $ircd, $nick, $channel, $text) = @_;
 
     debug "public [$channel] $nick : $text";
 
