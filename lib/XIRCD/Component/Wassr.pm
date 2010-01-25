@@ -1,119 +1,67 @@
 package XIRCD::Component::Wassr;
 use XIRCD::Component;
-
-use POE qw(
-    Component::Jabber
-    Component::Jabber::Error
-    Component::Jabber::Status
-    Component::Jabber::ProtocolFactory
-    Filter::XML::Node
-    Filter::XML::Utils
-);
-use POE::Filter::XML::NS qw/:JABBER :IQ/;
-
-has 'jabber' => (
-    isa     => 'POE::Component::Jabber',
-    is      => 'rw',
-);
+use Coro;
+use Coro::AnyEvent;
+use AnyEvent;
+use AnyEvent::XMPP::Client;
 
 has 'username' => ( isa => 'Str', is => 'rw' );
 has 'password' => ( isa => 'Str', is => 'rw' );
 has 'server'   => ( isa => 'Str', is => 'rw' );
 has 'port'     => ( isa => 'Int', is => 'rw', default => sub { 5222 } );
 
+has jabber => (
+    is => 'rw',
+    isa => 'AnyEvent::XMPP::Client',
+);
+
 has 'jid' => (
     isa     => 'Str',
     is      => 'rw',
 );
 
-sub init_component {
+sub init {
+    my $self = shift;
     debug "start wassr";
-    my ($username, $hostname) = split '@', self->username;
 
-    self->jabber(
-        POE::Component::Jabber->new(
-            IP       => self->server,
-            Port     => self->port,
-            Hostname => $hostname,
-            Username => $username,
-            Password => self->password,
-            Alias    => 'jabber',
-            States   => {
-                StatusEvent => 'status_handler',
-                InputEvent  => 'input_handler',
-                ErrorEvent  => 'error_handler',
-            },
-            ConnectionType => +XMPP,
-        )
+    my $cl = AnyEvent::XMPP::Client->new( debug => 0 );
+    $cl->add_account( $self->username, $self->password, $self->server, $self->port );
+    $cl->reg_cb(
+        session_ready => sub {
+            debug "sesssion_ready";
+        },
+        connected => sub {
+            debug "connected";
+        },
+        message => sub {
+            my ($cl, $acc, $msg) = @_;
+            debug "got message";
+
+            async {
+                my $from = $msg->from;
+                my $body = $msg->any_body;
+                debug "'$body' from '$from'";
+                if ($body && $from =~ /^wassr-bot\@wassr\.jp/) {
+                    my ($nick, $text) = $body =~ /^([A-Za-z0-9_.-]+): (.*)/s;
+                    if ($nick && $text) {
+                        $self->publish_message($nick => $text);
+                    } else {
+                        $self->publish_message('wassr' => $body);
+                    }
+                }
+            };
+        },
     );
-
-    post jabber => 'connect';
+    $cl->start;
+    $self->jabber($cl);
 }
 
-event status_handler => sub {
-    my ($state,) = get_args;
+# FIXME: this routine doesn't works
+sub receive_message {
+    my ($self, $message) = @_;
 
-    if ($state == +PCJ_INIT_FINISHED) {
-        debug "init finished";
-        self->jid(self->jabber->jid);
-
-        post jabber => 'output_handler', POE::Filter::XML::Node->new('presence');
-        post jabber => 'purge_queue';
-    }
-};
-
-event input_handler => sub {
-    my ($node,) = get_args;
-
-    debug "recv:", $node->to_str;
-
-    my ($body,) = $node->get_tag('body');
-
-    if ($body && $node->attr('from') =~ /^wassr-bot\@wassr\.jp/) {
-        my ($nick, $text) = $body->data =~ /^([A-Za-z0-9_.-]+): (.*)/s;
-        if ($nick && $text) {
-            publish_message $nick => $text;
-        } else {
-            publish_notice $body->data;
-        }
-    }
-};
-
-event send_message => sub {
-    my ($message,) = get_args;
-
-    my $node = POE::Filter::XML::Node->new('message');
-
-    $node->attr('to', 'wassr-bot@wassr.jp');
-    $node->attr('from', self->{jid} );
-    $node->attr('type', 'chat');
-    $node->insert_tag('body')->data( $message );
-
-    debug "send:", $node->to_str;
-
-    post jabber => output_handler => $node;
-};
-
-event error_handler => sub {
-    my ($error,) = get_args;
-
-    if ( $error == +PCJ_SOCKETFAIL or $error == +PCJ_SOCKETDISCONNECT or $error == +PCJ_CONNECTFAIL ) {
-        debug "Reconnecting!";
-        post jabber => 'reconnect';
-    }
-    elsif ( $error == +PCJ_SSLFAIL ) {
-        debug "TLS/SSL negotiation failed";
-    }
-    elsif ( $error == +PCJ_AUTHFAIL ) {
-        debug "Failed to authenticate";
-    }
-    elsif ( $error == +PCJ_BINDFAIL ) {
-        debug "Failed to bind a resource";
-    }
-    elsif ( $error == +PCJ_SESSIONFAIL ) {
-        debug "Failed to establish a session";
-    }
-};
-
+    debug "send:", $message;
+    $self->jabber->send_message('test', 'wassr-bot@wassr.jp');
+}
 
 1;

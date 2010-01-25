@@ -1,24 +1,17 @@
 package XIRCD::Component::RSS;
 use XIRCD::Component;
-use strict;
-
+use Coro;
+use Coro::LWP;
+use Coro::AnyEvent;
+use AnyEvent::HTTP;
 use Encode;
+use LWP::UserAgent;
 use HTTP::Request::Common;
 use HTTP::Date ();
-use POE qw( Component::Client::HTTP );
 use URI;
 use XML::Feed;
 use XML::Feed::Deduper;
 use File::Temp ();
-
-has 'http_alias' => (
-    is      => 'rw',
-    isa     => 'Str',
-    default => sub {
-        my $self = shift;
-        "http_$self";
-    },
-);
 
 has 'deduper' => (
     is      => 'rw',
@@ -62,55 +55,43 @@ has follow_redirects => (
     default => 2,
 );
 
-sub init_component {
-    debug "alias of client::http is " . self->http_alias;
-
-    POE::Component::Client::HTTP->spawn(
-        Agent => 'xircd_component_twitter/0.1',
-        Alias => self->http_alias,
-        FollowRedirects => self->follow_redirects,
-    );
-}
-
-event start => sub {
+sub init {
+    my $self = shift;
     debug "read rss";
 
-    debug "send request to @{[ self->url ]}";
+    my $ua = LWP::UserAgent->new(
+        default_headers => HTTP::Headers->new(
+            'Accept-Encoding' => 'gzip',
+        ),
+        follow_redirects => $self->follow_redirects,
+    );
 
-    my $req = HTTP::Request->new(GET => self->url, [
-        'Accept-Encoding' => 'gzip'
-    ]);
-    post self->http_alias() => request => 'http_response', $req;
-};
-
-event http_response => sub {
-    my ($request_packet, $response_packet) = get_args;
-
-    debug "we seen http-response";
-
-    my $req = $request_packet->[0];
-    my $res = $response_packet->[0];
-
-    if ($res->is_success) {
-        eval {
-            my $src = $res->decoded_content;
-            my $feed = XML::Feed->parse(\$src) or die XML::Feed->errstr;
-            for my $entry (self->deduper->dedup($feed->entries)) {
-                my $msg = self->tmpl;
-                $msg =~ s/\$(\w+)/$entry->$1/eg;
-                my $nick = $entry->author || $feed->author || 'anonymous';
-                publish_message $nick => $msg;
+    timer(
+        interval => $self->sleep,
+        cb       => sub {
+            debug "send request to @{[ $self->url ]}";
+            my $res = $ua->get( $self->url );
+            if ( $res->is_success ) {
+                eval {
+                    my $src = $res->decoded_content;
+                    my $feed = XML::Feed->parse( \$src ) or die XML::Feed->errstr;
+                    for my $entry ( $self->deduper->dedup( $feed->entries ) ) {
+                        my $msg = $self->tmpl;
+                        $msg =~ s/\$(\w+)/$entry->$1/eg;
+                        my $nick = $entry->author || $feed->author || 'anonymous';
+                        $self->publish_message($nick => $msg);
+                    }
+                };
+                if ( my $e = $@ ) {
+                    $self->publish_message('rss' => 'parse error : ' . $e);
+                }
             }
-        };
-        if (my $e = $@) {
-            publish_message 'rss' => 'parse error : ' . $e;
+            else {
+                $self->publish_message('rss' => 'got a error : ' . $res->status_line);
+            }
         }
-    } else {
-        publish_message 'rss' => 'got a error : ' . $res->status_line;
-    }
-
-    delay start => self->sleep;
-};
+    );
+}
 
 1;
 __END__

@@ -10,14 +10,20 @@ ircd:
   ircd_option:
     no_nick_tweaks: 1
 components:
-  - module: Twitter
-    screenname: user
-    username: user
-    password: pass
-    retry: 60
-  - module: Wassr
-    username: user@gmail.com
-    password: pass
-    server: talk.google.com
-    port: 5222
+# - module: Time
+#   nick: time
+#   interval: 1
+# - module: RSS
+#   url: http://search.cpan.org/uploads.rdf
+  - module: Echo
+# - module: Twitter
+#   screenname: jkljkl11
+#   username: jkljkl11
+#   password: jkljkl11
+#   retry: 60
+# - module: Wassr
+#   username: user@gmail.com
+#   password: pass
+#   server: talk.google.com
+#   port: 5222
 

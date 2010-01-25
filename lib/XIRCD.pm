@@ -1,46 +1,71 @@
 package XIRCD;
 use Any::Moose;
-with any_moose('X::Getopt');
 
 our $VERSION = '0.0.1';
 
-use POE;
+use Coro;
+use Coro::AnyEvent;
+use AnyEvent;
 use YAML;
+use Getopt::Long;
+use Pod::Usage;
 
 use XIRCD::Server;
 
-has 'config' => (
-    is       => 'rw',
-    isa      => 'Str',
-    required => 1,
-    trigger  => sub {
-        my $self = shift;
-        unless (-f $self->config) {
-            Carp::croak 'configuration file not found: ' . $self->config;
-        }
-    }
+{
+    my $_context;
+    sub context { $_context }
+    sub set_context { $_context = $_[1] }
+}
+
+has server => (
+    is => 'rw',
+    isa => 'XIRCD::Server',
 );
 
 sub bootstrap {
     my $self = shift;
 
-    print "run with ", (Any::Moose::is_moose_loaded() ? 'Moose' : 'Mouse'), "\n";
+    XIRCD->set_context($self);
 
-    my $config = YAML::LoadFile($self->config) or die $!;
-
-    XIRCD::Server->run($config->{ircd});
-
-    for my $component ( @{$config->{components}} ) {
-        my $module = 'XIRCD::Component::' . $component->{module};
-        Any::Moose::load_class($module);
-        $module->run( 
-            name    => lc($component->{module}),
-            channel => '#' . lc($component->{module}),
-            %{$component} 
-        );
+    my $conffile = 'config.yaml';
+    GetOptions(
+        'c|config=s' => \$conffile,
+    );
+    pod2usage() unless $conffile;
+    unless (-f $conffile) {
+        Carp::croak "configuration file not found: $conffile";
     }
 
-    POE::Kernel->run;
+    print "run with ", (Any::Moose::moose_is_preferred() ? 'Moose' : 'Mouse'), "\n";
+
+    my $config = YAML::LoadFile($conffile) or die $!;
+
+    my $server = XIRCD::Server->new($config->{ircd});
+    $self->server( $server );
+
+    my @coros;
+    for my $component ( @{$config->{components}} ) {
+        # please wait main loop
+        push @coros, async {
+            my $module = 'XIRCD::Component::' . $component->{module};
+            Any::Moose::load_class($module);
+            my $obj = $module->new($component);
+            $server->register($obj);
+            print "spawned $module at @{[ $obj->channel ]}\n";
+        };
+    }
+
+    # are you running?
+#   my $w = AnyEvent->timer(
+#       after    => 0.5,
+#       interval => 1,
+#       cb       => sub {
+#           warn "running\n";
+#       }
+#   );
+
+    AnyEvent->condvar->recv;
 }
 
 no Any::Moose;
@@ -54,7 +79,7 @@ XIRCD -
 
 =head1 SYNOPSIS
 
-  use XIRCD;
+    % xircd -c config.yaml
 
 =head1 DESCRIPTION
 
