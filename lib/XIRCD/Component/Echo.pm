@@ -13,7 +13,9 @@ has 'nick' => (
 sub receive_message {
     my ($self, $msg) = @_;
     debug "[Echo] received: $msg";
-    $self->publish_message($self->nick => "I got '$msg'");
+    unless ($msg =~ /^I got '/) {
+        $self->publish_message($self->nick => "I got '$msg'");
+    }
 }
 
 1;
